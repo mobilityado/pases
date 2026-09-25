@@ -127,3 +127,10 @@ El Pase de Aclaración incluye Clave, Nombre y Marca del conductor.
 La clave usa el mismo catálogo CONDUCTORES y autocompleta Nombre/Marca.
 Si no existe, permite captura manual y el backend lo registra mediante ensureDriver_.
 El PDF de Aclaración muestra los datos del conductor y continúa sin Observaciones/Notas.
+
+## v1.8.1 – Hotfix conductor en PDF de Aclaración
+- Corrige el conductor en blanco en el PDF final.
+- El backend crea automáticamente las columnas `CLAVE_CONDUCTOR`, `NOMBRE_CONDUCTOR` y `MARCA`
+  si faltan en la hoja PASES_ACLARACION.
+- El PDF recupera Nombre y Marca desde CONDUCTORES como respaldo usando la clave.
+- El correo de autorización también muestra la Marca.

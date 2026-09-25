@@ -233,6 +233,7 @@ function saveAclaracion_(b) {
     TOKEN_AUTORIZACION:tokenAut
   };
   const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
+  ensureHeaders_(sh,['CLAVE_CONDUCTOR','NOMBRE_CONDUCTOR','MARCA']);
   appendObject_(sh,obj);
 
   const url=ScriptApp.getService().getUrl();
@@ -241,7 +242,7 @@ function saveAclaracion_(b) {
   const html='<div style="font-family:Arial;max-width:650px">'+
     '<h2>Pase de Aclaración pendiente</h2><p><b>Folio:</b> '+esc_(folio)+'</p>'+
     '<p><b>Área:</b> '+esc_(s.area)+' &nbsp; <b>Autobús:</b> '+esc_(d.autobus)+'</p>'+
-    '<p><b>Conductor:</b> '+esc_(d.claveConductor+' - '+d.nombreConductor)+'</p>'+
+    '<p><b>Conductor:</b> '+esc_(d.claveConductor+' - '+d.nombreConductor)+'</p>'+'<p><b>Marca:</b> '+esc_(d.marca||'')+'</p>'+
     '<p><b>Motivo:</b> '+esc_(d.motivoConcepto)+'</p>'+
     '<p><a href="'+yes+'" style="background:#18864b;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">AUTORIZAR</a> '+
     '<a href="'+no+'" style="background:#b42318;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">RECHAZAR</a></p></div>';
@@ -375,11 +376,22 @@ function createPdf_(tipo,r) {
 
   let rows;
   if(tipo==='ACLARACION'){
+    let claveAc=val_(r,'CLAVE_CONDUCTOR','CLAVE CONDUCTOR','CLAVE');
+    let nombreAc=val_(r,'NOMBRE_CONDUCTOR','NOMBRE CONDUCTOR','CONDUCTOR');
+    let marcaAc=val_(r,'MARCA');
+    if(claveAc && (!nombreAc || !marcaAc)){
+      const dr=objects_(sheet_(CFG.SS_USUARIOS,CFG.SH_CONDUCTORES))
+        .find(x=>val_(x,'CLAVE')===String(claveAc));
+      if(dr){
+        if(!nombreAc) nombreAc=val_(dr,'NOMBRE');
+        if(!marcaAc) marcaAc=val_(dr,'MARCA');
+      }
+    }
     rows=[
       ['ÁREA',val_(r,'AREA'),'FECHA ACTUAL',fmtDate_(val_(r,'FECHA_CREACION'))],
       ['FECHA EVENTO',fmtDate_(val_(r,'FECHA_EVENTO')),'AUTOBÚS',val_(r,'AUTOBUS')],
-      ['CLAVE',val_(r,'CLAVE_CONDUCTOR'),'CONDUCTOR',val_(r,'NOMBRE_CONDUCTOR')],
-      ['MARCA',val_(r,'MARCA'),'',''],
+      ['CLAVE',claveAc,'CONDUCTOR',nombreAc],
+      ['MARCA',marcaAc,'',''],
       ['MOTIVO / CONCEPTO',val_(r,'MOTIVO_CONCEPTO'),'','']
     ];
   } else {
@@ -489,6 +501,24 @@ function objects_(sh) {
     const o={__row:i+2};
     h.forEach((k,j)=>o[k]=r[j]);
     return o;
+  });
+}
+
+
+function ensureHeaders_(sh, requiredHeaders) {
+  let lastCol=sh.getLastColumn();
+  if(lastCol<1){
+    sh.getRange(1,1,1,requiredHeaders.length).setValues([requiredHeaders]);
+    return;
+  }
+  const current=sh.getRange(1,1,1,lastCol).getValues()[0];
+  const normalized=current.map(norm_);
+  requiredHeaders.forEach(function(h){
+    if(!normalized.includes(norm_(h))){
+      lastCol++;
+      sh.getRange(1,lastCol).setValue(h);
+      normalized.push(norm_(h));
+    }
   });
 }
 
