@@ -70,3 +70,10 @@ Pestaña `CONDUCTORES`:
 - Encabezado morado/rojo y folio destacado.
 - Campos en recuadros para acercar el PDF al aspecto de un pase físico.
 - El logo está incrustado dentro de `Code.gs`; no necesitas subirlo a Drive.
+
+## Cambios v1.3
+- La marca de No Adeudo ya no se selecciona manualmente cuando el conductor existe.
+- Al escribir la CLAVE, se obtiene NOMBRE y MARCA desde `CONDUCTORES`.
+- NOMBRE y MARCA quedan bloqueados para evitar modificar accidentalmente el catálogo.
+- Si la CLAVE no existe, ambos campos se habilitan y el nuevo conductor se registra al generar el pase.
+- Se cambió el motor visual del PDF para incrustar el logo dentro del propio pase y conservar marco, colores y formato horizontal.

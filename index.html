@@ -50,7 +50,7 @@ h2{margin-top:0}@media(max-width:760px){.grid,.grid3,.menu{grid-template-columns
       <div class="row"><h2>Pase de No Adeudo</h2><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
       <div class="grid3">
         <div><label>Recaudación</label><select id="naRecaudacion"><option value="">Selecciona...</option><option>VILLAHERMOSA</option><option>CARDENAS</option></select></div>
-        <div><label>Marca</label><select id="naMarca"><option value="">Selecciona...</option><option>SURO</option><option>TRT</option><option>ADO</option></select></div>
+        <div><label>Marca</label><input id="naMarca" readonly placeholder="Se obtiene del conductor"></div>
         <div><label>Autobús</label><input id="naAutobus"></div>
       </div><br>
       <div class="grid">
@@ -108,7 +108,23 @@ function enter(){loginView.classList.add('hide');appView.classList.remove('hide'
 async function logout(){try{await api('logout')}catch(e){}sessionStorage.clear();location.reload()}
 function show(id){['home','noAdeudo','aclaracion','consulta'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id))}
 function msg(id,t,bad=false){const e=document.getElementById(id);e.textContent=t;e.className='notice '+(bad?'driver-new':'driver-ok');e.classList.remove('hide')}
-async function driverLookup(prefix){const clave=document.getElementById(prefix+'Clave').value.trim();if(!clave)return;try{const d=await api('findDriver',{clave});const n=document.getElementById(prefix+'Nombre');const m=document.getElementById(prefix+'Marca');if(d.found){n.value=d.nombre;if(m)m.value=d.marca;msg(prefix+'DriverMsg',`✓ ${d.clave} — ${d.nombre}${d.marca?' — '+d.marca:''}`)}else{n.value='';n.focus();msg(prefix+'DriverMsg','Conductor no registrado. Captura el nombre'+(m?' y marca':'')+'. Al generar el pase quedará guardado.',true)}}catch(e){msg(prefix+'DriverMsg',e.message,true)}}
+async function driverLookup(prefix){
+ const clave=document.getElementById(prefix+'Clave').value.trim();if(!clave)return;
+ try{
+  const d=await api('findDriver',{clave});
+  const n=document.getElementById(prefix+'Nombre'), m=document.getElementById(prefix+'Marca');
+  if(d.found){
+    n.value=d.nombre;n.readOnly=true;
+    if(m){m.value=d.marca;m.readOnly=true}
+    msg(prefix+'DriverMsg',`✓ ${d.clave} — ${d.nombre}${d.marca?' — '+d.marca:''}`);
+  }else{
+    n.value='';n.readOnly=false;
+    if(m){m.value='';m.readOnly=false;m.placeholder='Escribe la marca del nuevo conductor'}
+    n.focus();
+    msg(prefix+'DriverMsg','Conductor no registrado. Captura nombre y marca; al generar el pase quedará guardado.',true);
+  }
+ }catch(e){msg(prefix+'DriverMsg',e.message,true)}
+}
 async function saveNA(){try{msg('naMsg','Generando pase y enviando correo...');const d=await api('saveNoAdeudo',{data:{recaudacion:naRecaudacion.value,marca:naMarca.value,autobus:naAutobus.value,claveConductor:naClave.value,nombreConductor:naNombre.value,observaciones:naObs.value}});msg('naMsg',`✓ ${d.folio} generado y enviado correctamente.`)}catch(e){msg('naMsg',e.message,true)}}
 async function saveAC(){try{msg('acMsg','Registrando y enviando autorización...');const d=await api('saveAclaracion',{data:{fechaEvento:acFecha.value,motivoConcepto:acMotivo.value,autobus:acAutobus.value,claveConductor:acClave.value,nombreConductor:acNombre.value,observaciones:acObs.value,destinoAutorizacion:acDestino.value}});msg('acMsg',`✓ ${d.folio} enviado a ${d.enviadoA}.`)}catch(e){msg('acMsg',e.message,true)}}
 let timer;function debounceLoad(){clearTimeout(timer);timer=setTimeout(loadPasses,350)}
