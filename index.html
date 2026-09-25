@@ -81,7 +81,7 @@ h2{margin-top:0;font-size:21px;letter-spacing:-.3px} @media(max-width:760px){.gr
       <div class="grid3">
         <div><label>Fecha del evento</label><input id="acFecha" type="date"></div>
         <div><label>Autobús</label><input id="acAutobus"></div>
-        <div><label>Enviar autorización a</label><select id="acDestino"><option>PRECEPTOR</option><option>ADMINISTRADOR</option><option>GERENTE</option></select></div>
+        <div><label>Enviar autorización a</label><select id="acDestino"><option>PRECEPTOR</option><option>PRECEPTOR CRT</option><option>ADMINISTRADOR</option><option>GERENTE</option></select></div>
       </div><br>
       <div class="grid">
         <div><label>Clave conductor</label><input id="acClave" onblur="driverLookup('ac')"></div>
@@ -117,7 +117,7 @@ async function api(action,payload={}){
 }
 function init(){if(token&&profile) enter(); else document.getElementById('loginView').classList.remove('hide');}
 async function login(){try{msg('loginMsg','Validando...',false);const d=await api('login',{usuario:usuario.value,contrasena:contrasena.value});token=d.token;profile=d.profile;sessionStorage.setItem('pases_token',token);sessionStorage.setItem('pases_profile',JSON.stringify(profile));enter()}catch(e){msg('loginMsg',e.message,true)}}
-function enter(){loginView.classList.add('hide');appView.classList.remove('hide');who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;authTile.classList.toggle('hide',!['ADMINISTRADOR','PRECEPTOR','GERENTE'].includes(String(profile.tipo).toUpperCase()));}
+function enter(){loginView.classList.add('hide');appView.classList.remove('hide');who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;authTile.classList.toggle('hide',!['ADMINISTRADOR','PRECEPTOR','PRECEPTOR CRT','GERENTE'].includes(String(profile.tipo).toUpperCase()));}
 async function logout(){try{await api('logout')}catch(e){}sessionStorage.clear();location.reload()}
 function show(id){['home','noAdeudo','aclaracion','consulta'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id))}
 function msg(id,t,bad=false){const e=document.getElementById(id);e.textContent=t;e.className='notice '+(bad?'driver-new':'driver-ok');e.classList.remove('hide')}

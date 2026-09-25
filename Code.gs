@@ -192,10 +192,26 @@ function saveAclaracion_(b) {
   const now=new Date();
   const u=userRow_(s.usuario)||{};
   const destino=String(d.destinoAutorizacion).toUpperCase();
-  const emailKey = destino==='PRECEPTOR' ? ['CORREO_ACLARACION_PRECEPTOR','CORREO ACLARACION PRECEPTOR'] :
-                   destino==='ADMINISTRADOR' ? ['CORREO_ACLARACION_ADMIN','CORREO ACLARACION ADMIN'] :
-                   ['CORREO_ACLARACION_GERENTE','CORREO ACLARACION GERENTE'];
-  const correoAut=val_.apply(null,[u].concat(emailKey));
+  let correoAut='';
+  if (destino==='PRECEPTOR CRT') {
+    const usuarios = objects_(sheet_(CFG.SS_USUARIOS, CFG.SH_USUARIOS));
+    const preceptorCrt = usuarios.find(r =>
+      val_(r,'TIPO_CUENTA','TIPO DE CUENTA').toUpperCase()==='PRECEPTOR CRT' &&
+      val_(r,'ACTIVO').toUpperCase()!=='NO'
+    );
+    if (preceptorCrt) {
+      correoAut = val_(preceptorCrt,
+        'CORREO_USUARIO',
+        'CORREO_ACLARACION_PRECEPTOR',
+        'CORREO ACLARACION PRECEPTOR'
+      );
+    }
+  } else {
+    const emailKey = destino==='PRECEPTOR' ? ['CORREO_ACLARACION_PRECEPTOR','CORREO ACLARACION PRECEPTOR'] :
+                     destino==='ADMINISTRADOR' ? ['CORREO_ACLARACION_ADMIN','CORREO ACLARACION ADMIN'] :
+                     ['CORREO_ACLARACION_GERENTE','CORREO ACLARACION GERENTE'];
+    correoAut=val_.apply(null,[u].concat(emailKey));
+  }
   if (!correoAut) throw new Error('No está configurado el correo para '+destino+'.');
 
   const tokenAut=Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');
@@ -245,7 +261,7 @@ function decisionPage_(p) {
 function decisionApi_(b) {
   const s=session_(b.token);
   const tipo=String(s.tipo||'').toUpperCase();
-  if (!['ADMINISTRADOR','PRECEPTOR','GERENTE'].includes(tipo))
+  if (!['ADMINISTRADOR','PRECEPTOR','PRECEPTOR CRT','GERENTE'].includes(tipo))
     throw new Error('Tu perfil no puede autorizar pases.');
   return processDecision_(b.tokenAut,b.decision,b.comentario||'',s.usuario);
 }
@@ -344,7 +360,7 @@ function createPdf_(tipo,r) {
   // Título y folio.
   addSlideText_(slide, tipo==='ACLARACION'?'PASE DE ACLARACIÓN':'PASE DE NO ADEUDO',
     190,31,330,32,17,true,purple,SlidesApp.ParagraphAlignment.CENTER);
-  const fol=slide.insertShape(SlidesApp.ShapeType.ROUNDED_RECTANGLE,535,31,155,34);
+  const fol=slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE,535,31,155,34);
   fol.getFill().setSolidFill(red); fol.getBorder().setTransparent();
   setShapeText_(fol,'FOLIO  '+folio,11,true,'#FFFFFF',SlidesApp.ParagraphAlignment.CENTER);
 
@@ -388,7 +404,7 @@ function createPdf_(tipo,r) {
 
   // Pie sin líneas de firma: usuarios responsables.
   const footerY=350;
-  const footer=slide.insertShape(SlidesApp.ShapeType.ROUNDED_RECTANGLE,24,footerY,672,34);
+  const footer=slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE,24,footerY,672,34);
   footer.getFill().setSolidFill(light);
   footer.getBorder().setWeight(1);
   footer.getBorder().getLineFill().setSolidFill('#B8A7C5');

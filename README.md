@@ -92,3 +92,14 @@ Pestaña `CONDUCTORES`:
 - Si la clave existe, MARCA y NOMBRE se toman directamente de CONDUCTORES, sin lista fija.
 - Si la clave es nueva, la marca sí se captura manualmente y se guarda para futuras visitas.
 - Portal con nuevo dashboard ejecutivo, hero corporativo, logo real, encabezado profesional y accesos rápidos.
+
+## Hotfix v1.5.1
+- Corregido el error `El tipo de forma no es válido`.
+- Google Slides usa `ROUND_RECTANGLE`; la versión anterior tenía `ROUNDED_RECTANGLE`.
+- No cambia la lógica de conductores, marca automática ni el diseño ejecutivo.
+
+## v1.5.2
+- Agregada opción `PRECEPTOR CRT` en Pase de Aclaración.
+- Al elegirla, el backend busca en `USUARIOS` la fila cuyo `TIPO_CUENTA` sea `PRECEPTOR CRT`.
+- El correo se toma primero de `CORREO_USUARIO`; como respaldo, de `CORREO_ACLARACION_PRECEPTOR`.
+- `PRECEPTOR CRT` también puede autorizar pases desde el portal.
