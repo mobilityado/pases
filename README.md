@@ -121,3 +121,9 @@ La hoja USUARIOS usa `CORREO 1` y `CORREO 2` como únicas fuentes de destinatari
 - Al aprobar una aclaración: PDF final a TODOS los `USUARIO` + `ADMINISTRADOR`.
 - Se eliminan correos duplicados automáticamente, incluso si el mismo correo aparece en CORREO 1 y CORREO 2.
 - Se restauró Observaciones en No Adeudo; Aclaración continúa sin notas/observaciones.
+
+## v1.8 – Datos del conductor en Aclaración
+El Pase de Aclaración incluye Clave, Nombre y Marca del conductor.
+La clave usa el mismo catálogo CONDUCTORES y autocompleta Nombre/Marca.
+Si no existe, permite captura manual y el backend lo registra mediante ensureDriver_.
+El PDF de Aclaración muestra los datos del conductor y continúa sin Observaciones/Notas.

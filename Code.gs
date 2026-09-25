@@ -225,7 +225,7 @@ function saveAclaracion_(b) {
   const obj={
     ID:Utilities.getUuid(), FOLIO:folio, AREA:s.area, FECHA_CREACION:now,
     FECHA_EVENTO:d.fechaEvento, MOTIVO_CONCEPTO:d.motivoConcepto, AUTOBUS:d.autobus,
-    CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor,
+    CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor, MARCA:d.marca||'',
     OBSERVACIONES:'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre,
     DESTINO_AUTORIZACION:destino, CORREO_AUTORIZADOR:correoAut, ESTATUS:'PENDIENTE',
     FECHA_ENVIO_AUTORIZACION:now, AUTORIZADO_POR:'', FECHA_AUTORIZACION:'',
@@ -379,8 +379,8 @@ function createPdf_(tipo,r) {
       ['ÁREA',val_(r,'AREA'),'FECHA ACTUAL',fmtDate_(val_(r,'FECHA_CREACION'))],
       ['FECHA EVENTO',fmtDate_(val_(r,'FECHA_EVENTO')),'AUTOBÚS',val_(r,'AUTOBUS')],
       ['CLAVE',val_(r,'CLAVE_CONDUCTOR'),'CONDUCTOR',val_(r,'NOMBRE_CONDUCTOR')],
-      ['MOTIVO / CONCEPTO',val_(r,'MOTIVO_CONCEPTO'),'',''],
-      ['OBSERVACIONES',val_(r,'OBSERVACIONES'),'','']
+      ['MARCA',val_(r,'MARCA'),'',''],
+      ['MOTIVO / CONCEPTO',val_(r,'MOTIVO_CONCEPTO'),'','']
     ];
   } else {
     rows=[

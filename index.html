@@ -178,9 +178,10 @@ tr:last-child td{border-bottom:0!important}
         <div><label>Autobús</label><input id="acAutobus"></div>
         <div><label>Enviar autorización a</label><select id="acDestino"><option>PRECEPTOR</option><option>PRECEPTOR CRT</option><option>ADMINISTRADOR</option><option>GERENTE</option></select></div>
       </div><br>
-      <div class="grid">
-        <div><label>Clave conductor</label><input id="acClave" onblur="driverLookup('ac')"></div>
-        <div><label>Nombre conductor</label><input id="acNombre"></div>
+      <div class="grid3">
+        <div><label>Clave conductor</label><input id="acClave" onblur="driverLookup('ac')" placeholder="Clave del conductor"></div>
+        <div><label>Nombre conductor</label><input id="acNombre" placeholder="Se autocompleta"></div>
+        <div><label>Marca</label><input id="acMarca" placeholder="Se autocompleta"></div>
       </div>
       <p id="acDriverMsg" class="notice hide"></p><br>
       <label>Motivo / concepto del evento</label><textarea id="acMotivo"></textarea><br>
@@ -234,7 +235,7 @@ async function driverLookup(prefix){
  }catch(e){msg(prefix+'DriverMsg',e.message,true)}
 }
 async function saveNA(){try{msg('naMsg','Generando pase y enviando correo...');const d=await api('saveNoAdeudo',{data:{recaudacion:naRecaudacion.value,marca:naMarca.value,autobus:naAutobus.value,claveConductor:naClave.value,nombreConductor:naNombre.value,observaciones:naObs.value}});msg('naMsg',`✓ ${d.folio} generado y enviado correctamente.`)}catch(e){msg('naMsg',e.message,true)}}
-async function saveAC(){try{msg('acMsg','Registrando y enviando autorización...');const d=await api('saveAclaracion',{data:{fechaEvento:acFecha.value,motivoConcepto:acMotivo.value,autobus:acAutobus.value,claveConductor:acClave.value,nombreConductor:acNombre.value,destinoAutorizacion:acDestino.value}});msg('acMsg',`✓ ${d.folio} enviado a ${d.enviadoA}.`)}catch(e){msg('acMsg',e.message,true)}}
+async function saveAC(){try{msg('acMsg','Registrando y enviando autorización...');const d=await api('saveAclaracion',{data:{fechaEvento:acFecha.value,motivoConcepto:acMotivo.value,autobus:acAutobus.value,claveConductor:acClave.value,nombreConductor:acNombre.value,marca:acMarca.value,destinoAutorizacion:acDestino.value}});msg('acMsg',`✓ ${d.folio} enviado a ${d.enviadoA}.`)}catch(e){msg('acMsg',e.message,true)}}
 let timer;function debounceLoad(){clearTimeout(timer);timer=setTimeout(loadPasses,350)}
 async function loadPasses(){try{rows.innerHTML='<tr><td colspan="6">Cargando...</td></tr>';const a=await api('listPasses',{q:fQ.value,tipo:fTipo.value,estatus:fEstado.value});rows.innerHTML=a.length?a.map(x=>`<tr><td><b>${esc(x.folio)}</b></td><td>${x.tipo==='ACLARACION'?'Aclaración':'No Adeudo'}</td><td>${esc(x.area)}</td><td>${esc(x.claveConductor+' - '+x.nombreConductor)}</td><td>${esc(x.autobus)}</td><td><span class="badge">${esc(x.estatus)}</span></td></tr>`).join(''):'<tr><td colspan="6">Sin registros.</td></tr>'}catch(e){rows.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
