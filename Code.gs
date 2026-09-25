@@ -164,7 +164,7 @@ function saveNoAdeudo_(b) {
     ID:Utilities.getUuid(), FOLIO:folio, AREA:s.area, FECHA_CREACION:now,
     RECAUDACION:d.recaudacion, MARCA:d.marca, AUTOBUS:d.autobus,
     CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor,
-    OBSERVACIONES:d.observaciones||'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre, CORREO_DESTINO:correoDestino,
+    OBSERVACIONES:'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre, CORREO_DESTINO:correoDestino,
     ESTATUS:'GENERADO', FECHA_ENVIO:'', URL_DOCUMENTO:''
   };
   const sh=sheet_(CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
@@ -219,7 +219,7 @@ function saveAclaracion_(b) {
     ID:Utilities.getUuid(), FOLIO:folio, AREA:s.area, FECHA_CREACION:now,
     FECHA_EVENTO:d.fechaEvento, MOTIVO_CONCEPTO:d.motivoConcepto, AUTOBUS:d.autobus,
     CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor,
-    OBSERVACIONES:d.observaciones||'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre,
+    OBSERVACIONES:'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre,
     DESTINO_AUTORIZACION:destino, CORREO_AUTORIZADOR:correoAut, ESTATUS:'PENDIENTE',
     FECHA_ENVIO_AUTORIZACION:now, AUTORIZADO_POR:'', FECHA_AUTORIZACION:'',
     COMENTARIO_AUTORIZADOR:'', URL_DOCUMENTO:'', FECHA_ENVIO_FINAL:'',

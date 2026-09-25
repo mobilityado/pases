@@ -28,6 +28,101 @@ h2{margin-top:0;font-size:21px;letter-spacing:-.3px} @media(max-width:760px){.gr
 .sectionTitle{display:flex;justify-content:space-between;align-items:end;margin:0 2px 12px}.sectionTitle b{font-size:17px}.sectionTitle span{font-size:12px;color:#667085}
 .tile{min-height:150px!important;padding:24px!important}.tile b{font-size:17px!important}.tile span{line-height:1.45}.card h2{color:#35104d}
 @media(max-width:760px){.hero{padding:25px;min-height:160px}.hero h1{font-size:27px}.heroMark{display:none}.topIdentity img{width:86px}.statusDot{display:none}}
+
+/* ===== EXECUTIVE UI v1.6 ===== */
+:root{
+ --ado-purple:#4b145f;--ado-purple2:#6d2782;--ado-red:#e51f2b;
+ --ink:#172033;--muted:#667085;--line:#e8e5ec;--surface:#fff;
+ --bg:#f4f3f7;--success:#067647;
+}
+body{
+ background:
+ radial-gradient(circle at 8% 0%,rgba(109,39,130,.10),transparent 27%),
+ radial-gradient(circle at 95% 8%,rgba(229,31,43,.07),transparent 22%),
+ #f6f5f8!important;color:var(--ink)!important;
+}
+.wrap{max-width:1240px!important;padding:28px 28px 48px!important}
+.top{
+ position:sticky!important;top:0!important;z-index:30!important;
+ background:rgba(255,255,255,.90)!important;backdrop-filter:blur(16px);
+ border-bottom:1px solid rgba(75,20,95,.10)!important;
+ box-shadow:0 8px 30px rgba(34,24,45,.06)!important
+}
+.brand{font-size:18px!important;letter-spacing:-.25px}
+.sub{color:#667085!important;margin-top:3px}
+.card{
+ border:1px solid rgba(75,20,95,.09)!important;border-radius:22px!important;
+ box-shadow:0 14px 38px rgba(36,24,45,.075)!important;
+ background:rgba(255,255,255,.96)!important;padding:28px!important
+}
+.menu{gap:18px!important}
+.tile{
+ position:relative;overflow:hidden;border:1px solid rgba(75,20,95,.09)!important;
+ border-radius:20px!important;background:#fff!important;
+ box-shadow:0 10px 26px rgba(36,24,45,.06)!important;
+ transition:.22s ease!important
+}
+.tile:before{
+ content:"";position:absolute;left:0;top:0;bottom:0;width:5px;
+ background:linear-gradient(180deg,var(--ado-purple),var(--ado-red))
+}
+.tile:hover{transform:translateY(-4px)!important;box-shadow:0 18px 42px rgba(36,24,45,.12)!important;border-color:#d9cbe0!important}
+.tile b{color:#35104d!important;font-size:18px!important}
+.tile span{color:#667085!important}
+input,select,textarea{
+ border:1px solid #ddd7e2!important;border-radius:13px!important;
+ background:#fff!important;padding:13px 14px!important;
+ box-shadow:0 1px 2px rgba(16,24,40,.03)!important;
+ transition:.18s ease!important
+}
+input:focus,select:focus,textarea:focus{
+ border-color:#8e5aa0!important;box-shadow:0 0 0 4px rgba(109,39,130,.10)!important;
+ outline:none!important
+}
+label{font-weight:750!important;color:#344054!important;font-size:12px!important;letter-spacing:.12px}
+.btn{
+ border-radius:12px!important;padding:11px 17px!important;font-weight:800!important;
+ box-shadow:none!important;transition:.18s ease!important
+}
+.btn:not(.ghost){
+ background:linear-gradient(135deg,#4b145f,#702b84)!important;
+ box-shadow:0 8px 18px rgba(75,20,95,.18)!important
+}
+.btn:not(.ghost):hover{transform:translateY(-1px);box-shadow:0 11px 22px rgba(75,20,95,.24)!important}
+.btn.ghost{background:#fff!important;border:1px solid #e2dce6!important;color:#4b145f!important}
+h2{font-size:23px!important;letter-spacing:-.4px!important;margin-bottom:22px!important}
+.msg{border-radius:12px!important;padding:12px 14px!important}
+table{border-collapse:separate!important;border-spacing:0!important;overflow:hidden;border-radius:14px!important;border:1px solid #ebe7ee!important}
+th{background:#f7f4f8!important;color:#4b145f!important;font-size:11px!important;text-transform:uppercase;letter-spacing:.45px}
+td,th{padding:12px 13px!important;border-bottom:1px solid #eeeaf0!important}
+tr:last-child td{border-bottom:0!important}
+.login{
+ background:
+ radial-gradient(circle at 15% 15%,rgba(109,39,130,.18),transparent 32%),
+ radial-gradient(circle at 85% 75%,rgba(229,31,43,.11),transparent 28%),
+ #f7f6f9!important
+}
+.login .card{max-width:440px!important;padding:36px!important;border-radius:26px!important}
+.hero{
+ min-height:220px!important;padding:42px!important;border-radius:26px!important;
+ background:
+ linear-gradient(120deg,rgba(45,10,60,.98),rgba(92,28,112,.96)),
+ linear-gradient(135deg,#35104d,#7b2f87)!important;
+ box-shadow:0 22px 50px rgba(53,16,77,.20)!important
+}
+.hero:before{
+ content:"";position:absolute;right:70px;bottom:-105px;width:300px;height:300px;
+ border:1px solid rgba(255,255,255,.14);border-radius:50%
+}
+.hero h1{font-size:38px!important}
+.heroMark{font-size:72px!important;opacity:.12!important}
+.sectionTitle{margin-top:4px!important;margin-bottom:14px!important}
+#noadeudo .card,#aclaracion .card{border-top:4px solid #5b1c70!important}
+#consultas .card,#autorizaciones .card{border-top:4px solid #e51f2b!important}
+@media(max-width:760px){
+ .wrap{padding:18px 14px 34px!important}.card{padding:20px!important;border-radius:18px!important}
+ .hero{padding:28px 22px!important;min-height:180px!important}.hero h1{font-size:29px!important}
+}
 </style>
 </head>
 <body>
@@ -60,7 +155,7 @@ h2{margin-top:0;font-size:21px;letter-spacing:-.3px} @media(max-width:760px){.gr
     </section>
 
     <section id="noAdeudo" class="hide card">
-      <div class="row"><h2>Pase de No Adeudo</h2><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
+      <div class="row"><div class="eyebrow" style="color:#7b2f87">GENERACIÓN DE DOCUMENTO</div><h2>Pase de No Adeudo</h2><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
       <div class="grid3">
         <div><label>Recaudación</label><select id="naRecaudacion"><option value="">Selecciona...</option><option>VILLAHERMOSA</option><option>CARDENAS</option></select></div>
         <div><label>Marca</label><input id="naMarca" readonly placeholder="Se obtiene del conductor"></div>
@@ -77,7 +172,7 @@ h2{margin-top:0;font-size:21px;letter-spacing:-.3px} @media(max-width:760px){.gr
     </section>
 
     <section id="aclaracion" class="hide card">
-      <div class="row"><h2>Pase de Aclaración</h2><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
+      <div class="row"><div class="eyebrow" style="color:#7b2f87">SOLICITUD DE AUTORIZACIÓN</div><h2>Pase de Aclaración</h2><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
       <div class="grid3">
         <div><label>Fecha del evento</label><input id="acFecha" type="date"></div>
         <div><label>Autobús</label><input id="acAutobus"></div>
@@ -89,7 +184,7 @@ h2{margin-top:0;font-size:21px;letter-spacing:-.3px} @media(max-width:760px){.gr
       </div>
       <p id="acDriverMsg" class="notice hide"></p><br>
       <label>Motivo / concepto del evento</label><textarea id="acMotivo"></textarea><br>
-      <label>Observaciones</label><textarea id="acObs"></textarea><br>
+      
       <button class="btn red" onclick="saveAC()">Enviar a autorización</button>
       <p id="acMsg" class="notice hide"></p>
     </section>
@@ -139,7 +234,7 @@ async function driverLookup(prefix){
  }catch(e){msg(prefix+'DriverMsg',e.message,true)}
 }
 async function saveNA(){try{msg('naMsg','Generando pase y enviando correo...');const d=await api('saveNoAdeudo',{data:{recaudacion:naRecaudacion.value,marca:naMarca.value,autobus:naAutobus.value,claveConductor:naClave.value,nombreConductor:naNombre.value,observaciones:naObs.value}});msg('naMsg',`✓ ${d.folio} generado y enviado correctamente.`)}catch(e){msg('naMsg',e.message,true)}}
-async function saveAC(){try{msg('acMsg','Registrando y enviando autorización...');const d=await api('saveAclaracion',{data:{fechaEvento:acFecha.value,motivoConcepto:acMotivo.value,autobus:acAutobus.value,claveConductor:acClave.value,nombreConductor:acNombre.value,observaciones:acObs.value,destinoAutorizacion:acDestino.value}});msg('acMsg',`✓ ${d.folio} enviado a ${d.enviadoA}.`)}catch(e){msg('acMsg',e.message,true)}}
+async function saveAC(){try{msg('acMsg','Registrando y enviando autorización...');const d=await api('saveAclaracion',{data:{fechaEvento:acFecha.value,motivoConcepto:acMotivo.value,autobus:acAutobus.value,claveConductor:acClave.value,nombreConductor:acNombre.value,destinoAutorizacion:acDestino.value}});msg('acMsg',`✓ ${d.folio} enviado a ${d.enviadoA}.`)}catch(e){msg('acMsg',e.message,true)}}
 let timer;function debounceLoad(){clearTimeout(timer);timer=setTimeout(loadPasses,350)}
 async function loadPasses(){try{rows.innerHTML='<tr><td colspan="6">Cargando...</td></tr>';const a=await api('listPasses',{q:fQ.value,tipo:fTipo.value,estatus:fEstado.value});rows.innerHTML=a.length?a.map(x=>`<tr><td><b>${esc(x.folio)}</b></td><td>${x.tipo==='ACLARACION'?'Aclaración':'No Adeudo'}</td><td>${esc(x.area)}</td><td>${esc(x.claveConductor+' - '+x.nombreConductor)}</td><td>${esc(x.autobus)}</td><td><span class="badge">${esc(x.estatus)}</span></td></tr>`).join(''):'<tr><td colspan="6">Sin registros.</td></tr>'}catch(e){rows.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
