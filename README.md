@@ -77,3 +77,12 @@ Pestaña `CONDUCTORES`:
 - NOMBRE y MARCA quedan bloqueados para evitar modificar accidentalmente el catálogo.
 - Si la CLAVE no existe, ambos campos se habilitan y el nuevo conductor se registra al generar el pase.
 - Se cambió el motor visual del PDF para incrustar el logo dentro del propio pase y conservar marco, colores y formato horizontal.
+
+## Cambios v1.4
+- Motor PDF cambiado a Google Slides para que el logotipo PNG quede incrustado físicamente en el PDF.
+- Marco corporativo morado, folio rojo, formato horizontal y campos en recuadros.
+- Se eliminaron por completo las líneas/textos de firmas.
+- No Adeudo muestra `GENERADO POR: Nombre del usuario`.
+- Aclaración final muestra `GENERADO POR` y `AUTORIZADO POR`.
+- Portal rediseñado con apariencia ejecutiva: tarjetas blancas, acentos Mobility ADO, mejor jerarquía y tablas.
+- Sigue vigente la marca automática desde la pestaña CONDUCTORES.
