@@ -140,6 +140,8 @@ function saveNoAdeudo_(b) {
   requireUserCreator_(s);
   const d=b.data||{};
   required_(d,['recaudacion','marca','autobus','claveConductor','nombreConductor']);
+  if (!['VILLAHERMOSA','CARDENAS','CÁRDENAS'].includes(String(d.recaudacion||'').trim().toUpperCase())) throw new Error('Recaudación no válida.');
+  if (!['SURO','TRT','ADO'].includes(String(d.marca||'').trim().toUpperCase())) throw new Error('Marca no válida.');
 
   ensureDriver_(d.claveConductor,d.nombreConductor,d.marca);
 
@@ -153,7 +155,7 @@ function saveNoAdeudo_(b) {
     ID:Utilities.getUuid(), FOLIO:folio, AREA:s.area, FECHA_CREACION:now,
     RECAUDACION:d.recaudacion, MARCA:d.marca, AUTOBUS:d.autobus,
     CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor,
-    CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre, CORREO_DESTINO:correoDestino,
+    OBSERVACIONES:d.observaciones||'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre, CORREO_DESTINO:correoDestino,
     ESTATUS:'GENERADO', FECHA_ENVIO:'', URL_DOCUMENTO:''
   };
   const sh=sheet_(CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
@@ -303,49 +305,105 @@ function getPass_(b) {
 /* ========================= PDF / CORREO ========================= */
 
 function createPdf_(tipo,r) {
-  const doc=DocumentApp.create(tipo+' '+val_(r,'FOLIO'));
-  const body=doc.getBody();
-  body.setMarginTop(28).setMarginBottom(28).setMarginLeft(32).setMarginRight(32);
-  let p=body.appendParagraph('MOBILITY ADO');
-  p.setBold(true).setFontSize(18).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-  p=body.appendParagraph(tipo==='ACLARACION'?'PASE DE ACLARACIÓN':'PASE DE NO ADEUDO');
-  p.setBold(true).setFontSize(16).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-  body.appendHorizontalRule();
+  // El PDF se construye como un pase compacto, no como una hoja tamaño carta.
+  // NO ADEUDO: 14 x 9 cm. ACLARACIÓN: 15 x 12 cm.
   const folio=val_(r,'FOLIO');
-  body.appendParagraph('FOLIO: '+folio).setBold(true);
-
-  if (tipo==='ACLARACION') {
-    addField_(body,'ÁREA',val_(r,'AREA'));
-    addField_(body,'FECHA ACTUAL',fmt_(val_(r,'FECHA_CREACION')));
-    addField_(body,'FECHA EVENTO',fmt_(val_(r,'FECHA_EVENTO')));
-    addField_(body,'MOTIVO / CONCEPTO DE EVENTO',val_(r,'MOTIVO_CONCEPTO'));
-    addField_(body,'AUTOBÚS',val_(r,'AUTOBUS'));
-    addField_(body,'CONDUCTOR',val_(r,'CLAVE_CONDUCTOR')+' - '+val_(r,'NOMBRE_CONDUCTOR'));
-    addField_(body,'OBSERVACIONES',val_(r,'OBSERVACIONES'));
-    body.appendParagraph('\n\n________________________    ________________________    ________________________');
-    body.appendParagraph('FIRMA TACOGRAFÍA              FIRMA CONDUCTOR               FIRMA AUTORIZADO').setFontSize(8);
-  } else {
-    addField_(body,'RECAUDACIÓN',val_(r,'RECAUDACION'));
-    addField_(body,'MARCA',val_(r,'MARCA'));
-    addField_(body,'FECHA',fmt_(val_(r,'FECHA_CREACION')));
-    addField_(body,'AUTOBÚS',val_(r,'AUTOBUS'));
-    addField_(body,'CONDUCTOR',val_(r,'CLAVE_CONDUCTOR')+' - '+val_(r,'NOMBRE_CONDUCTOR'));
-    body.appendParagraph('\n\n_______________________________').setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-    body.appendParagraph('NOMBRE Y FIRMA DEL RECAUDADOR QUE AUTORIZÓ EL NO ADEUDO')
-      .setFontSize(8).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-  }
+  const doc=DocumentApp.create(tipo+' '+folio);
+  const id=doc.getId();
   doc.saveAndClose();
-  const f=DriveApp.getFileById(doc.getId());
+
+  if (tipo==='ACLARACION') setDocPage_(id, 15, 12, 0.45);
+  else setDocPage_(id, 14, 9, 0.45);
+
+  const d=DocumentApp.openById(id);
+  const body=d.getBody();
+  body.clear();
+  body.setMarginTop(10).setMarginBottom(10).setMarginLeft(12).setMarginRight(12);
+
+  if (tipo==='ACLARACION') buildAclaracionPass_(body,r);
+  else buildNoAdeudoPass_(body,r);
+
+  d.saveAndClose();
+  Utilities.sleep(500);
+  const f=DriveApp.getFileById(id);
   const pdf=f.getBlob().getAs(MimeType.PDF).setName(folio+'.pdf');
   f.setTrashed(true);
   return pdf;
 }
 
-function addField_(body,label,value) {
-  const p=body.appendParagraph('');
-  p.appendText(label+': ').setBold(true);
-  p.appendText(String(value||''));
-  body.appendParagraph('________________________________________________________________________________').setFontSize(7);
+function setDocPage_(docId,widthCm,heightCm,marginCm) {
+  const pt = cm => cm * 28.3464567;
+  const payload={requests:[{updateDocumentStyle:{documentStyle:{
+    pageSize:{width:{magnitude:pt(widthCm),unit:'PT'},height:{magnitude:pt(heightCm),unit:'PT'}},
+    marginTop:{magnitude:pt(marginCm),unit:'PT'},marginBottom:{magnitude:pt(marginCm),unit:'PT'},
+    marginLeft:{magnitude:pt(marginCm),unit:'PT'},marginRight:{magnitude:pt(marginCm),unit:'PT'}
+  },fields:'pageSize,marginTop,marginBottom,marginLeft,marginRight'}}]};
+  const res=UrlFetchApp.fetch('https://docs.googleapis.com/v1/documents/'+docId+':batchUpdate',{
+    method:'post',contentType:'application/json',payload:JSON.stringify(payload),
+    headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken()},muteHttpExceptions:true
+  });
+  if(res.getResponseCode()>=300) console.warn('No se pudo ajustar tamaño del pase: '+res.getContentText());
+}
+
+function buildNoAdeudoPass_(body,r) {
+  const head=body.appendTable([['MOBILITY ADO\nPASE DE NO ADEUDO','SERIE    FOLIO\nNº  '+val_(r,'FOLIO')]]);
+  head.setBorderWidth(1);
+  let c=head.getCell(0,0); c.setBackgroundColor('#FFFFFF');
+  c.getChild(0).asParagraph().setBold(true).setFontSize(12).setForegroundColor('#111111');
+  c=head.getCell(0,1); c.setBackgroundColor('#FFFFFF');
+  c.getChild(0).asParagraph().setBold(true).setFontSize(10).setForegroundColor('#C62828');
+
+  const t=body.appendTable([
+    ['RECAUDACIÓN:', val_(r,'RECAUDACION')],
+    ['MARCA:', val_(r,'MARCA')],
+    ['FECHA:', fmtDate_(val_(r,'FECHA_CREACION'))],
+    ['AUTOBÚS:', val_(r,'AUTOBUS')],
+    ['CONDUCTOR:', val_(r,'CLAVE_CONDUCTOR')+' - '+val_(r,'NOMBRE_CONDUCTOR')],
+    ['OBSERVACIONES:', val_(r,'OBSERVACIONES')||'']
+  ]);
+  t.setBorderWidth(0);
+  for(let i=0;i<t.getNumRows();i++){
+    t.getCell(i,0).getChild(0).asParagraph().setBold(true).setFontSize(8);
+    t.getCell(i,1).getChild(0).asParagraph().setFontSize(8);
+  }
+  body.appendParagraph('\n____________________________________________')
+    .setAlignment(DocumentApp.HorizontalAlignment.CENTER).setFontSize(8);
+  body.appendParagraph('CLAVE Y NOMBRE COMPLETO DEL RECAUDADOR QUE AUTORIZÓ EL NO ADEUDO')
+    .setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true).setFontSize(6);
+}
+
+function buildAclaracionPass_(body,r) {
+  const title=body.appendTable([['PASE DE ACLARACIÓN']]);
+  title.setBorderWidth(0); title.getCell(0,0).setBackgroundColor('#111111');
+  title.getCell(0,0).getChild(0).asParagraph().setForegroundColor('#FFFFFF').setBold(true)
+    .setFontSize(13).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+  const top=body.appendTable([['FOLIO '+val_(r,'AREA')+': '+val_(r,'FOLIO'),'TACOGRAFÍA '+val_(r,'AREA')+'\nNº']]);
+  top.setBorderWidth(0);
+  top.getCell(0,0).getChild(0).asParagraph().setFontSize(8).setBold(true);
+  top.getCell(0,1).getChild(0).asParagraph().setFontSize(8).setBold(true).setForegroundColor('#C62828');
+
+  const t=body.appendTable([
+    ['ÁREA:',val_(r,'AREA'),'FECHA ACTUAL:',fmtDate_(val_(r,'FECHA_CREACION'))],
+    ['FECHA EVENTO:',fmtDate_(val_(r,'FECHA_EVENTO')),'',''],
+    ['MOTIVO / CONCEPTO:',val_(r,'MOTIVO_CONCEPTO'),'',''],
+    ['AUTOBÚS:',val_(r,'AUTOBUS'),'CONDUCTOR:',val_(r,'CLAVE_CONDUCTOR')+' - '+val_(r,'NOMBRE_CONDUCTOR')],
+    ['OBSERVACIONES:',val_(r,'OBSERVACIONES'),'','']
+  ]);
+  t.setBorderWidth(0);
+  for(let i=0;i<t.getNumRows();i++) for(let j=0;j<t.getRow(i).getNumCells();j++) {
+    const p=t.getCell(i,j).getChild(0).asParagraph(); p.setFontSize(7); if(j%2===0)p.setBold(true);
+  }
+  body.appendParagraph('\n__________________      __________________      __________________')
+    .setAlignment(DocumentApp.HorizontalAlignment.CENTER).setFontSize(7);
+  body.appendParagraph('FIRMA Y SELLO TACOGRAFÍA     NOMBRE Y FIRMA CONDUCTOR     NOMBRE, FIRMA Y SELLO AUTORIZADO')
+    .setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true).setFontSize(5);
+}
+
+function fmtDate_(v){
+  if(!v)return '';
+  const d=new Date(v);
+  return isNaN(d)?String(v):Utilities.formatDate(d,CFG.TZ,'dd/MM/yyyy');
 }
 
 function sendMail_(to,subject,body,pdf) {

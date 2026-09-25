@@ -19,7 +19,7 @@ Pestaña `CONDUCTORES`:
 > Si ya habías creado la estructura anterior, agrega al final `TOKEN_AUTORIZACION`.
 
 ### PASES_NO_ADEUDO
-`ID | FOLIO | AREA | FECHA_CREACION | RECAUDACION | MARCA | AUTOBUS | CLAVE_CONDUCTOR | NOMBRE_CONDUCTOR | CREADO_POR | NOMBRE_CREADOR | CORREO_DESTINO | ESTATUS | FECHA_ENVIO | URL_DOCUMENTO`
+`ID | FOLIO | AREA | FECHA_CREACION | RECAUDACION | MARCA | AUTOBUS | CLAVE_CONDUCTOR | NOMBRE_CONDUCTOR | OBSERVACIONES | CREADO_POR | NOMBRE_CREADOR | CORREO_DESTINO | ESTATUS | FECHA_ENVIO | URL_DOCUMENTO`
 
 ## Paso 1 — Apps Script
 1. Abre tu proyecto actual de Apps Script.
@@ -52,3 +52,11 @@ Pestaña `CONDUCTORES`:
 - Restringe el acceso de edición pública a las hojas de Drive.
 - El código acepta los encabezados con guiones bajos indicados arriba.
 - Los PDFs iniciales son digitales y limpios. Después se puede afinar el diseño para que replique al milímetro los formatos físicos fotografiados.
+
+
+## Cambios v1.1
+- No Adeudo: Recaudación ahora es selección VILLAHERMOSA/CARDENAS.
+- No Adeudo: Marca ahora es selección SURO/TRT/ADO.
+- No Adeudo: se agregó OBSERVACIONES.
+- PDF compacto: No Adeudo 14 x 9 cm y Aclaración 15 x 12 cm, con estructura visual similar a los formatos físicos.
+- El ajuste de tamaño usa Google Docs API mediante UrlFetchApp; la primera ejecución puede solicitar autorización adicional.
