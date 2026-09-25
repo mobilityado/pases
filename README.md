@@ -60,3 +60,13 @@ Pestaña `CONDUCTORES`:
 - No Adeudo: se agregó OBSERVACIONES.
 - PDF compacto: No Adeudo 14 x 9 cm y Aclaración 15 x 12 cm, con estructura visual similar a los formatos físicos.
 - El ajuste de tamaño usa Google Docs API mediante UrlFetchApp; la primera ejecución puede solicitar autorización adicional.
+
+
+## Cambios v1.2
+- Ambos pases se generan en formato horizontal 20 × 12 cm.
+- Se utiliza prácticamente toda la hoja.
+- Se agregó el logotipo Mobility ADO proporcionado para el proyecto.
+- Marco exterior morado de 2 pt.
+- Encabezado morado/rojo y folio destacado.
+- Campos en recuadros para acercar el PDF al aspecto de un pase físico.
+- El logo está incrustado dentro de `Code.gs`; no necesitas subirlo a Drive.
