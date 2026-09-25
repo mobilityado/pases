@@ -81,7 +81,7 @@ function login_(b) {
     nombre: val_(found,'NOMBRE') || val_(found,'USUARIO'),
     area: val_(found,'AREA'),
     tipo: val_(found,'TIPO_CUENTA','TIPO DE CUENTA'),
-    correo: val_(found,'CORREO_USUARIO')
+    correo: val_(found,'CORREO_1','CORREO 1','CORREO_2','CORREO 2')
   };
   CacheService.getScriptCache().put('S_'+token, JSON.stringify(profile), CFG.SESSION_MINUTES*60);
   return {token, profile};
@@ -98,6 +98,31 @@ function session_(token) {
   if (!raw) throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
   CacheService.getScriptCache().put('S_'+token, raw, CFG.SESSION_MINUTES*60);
   return JSON.parse(raw);
+}
+
+
+function emailsByProfiles_(profiles) {
+  const wanted=(profiles||[]).map(x=>norm_(x));
+  const rows=objects_(sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS));
+  const emails=[];
+  rows.forEach(r=>{
+    const tipo=norm_(val_(r,'TIPO_CUENTA','TIPO DE CUENTA'));
+    if (!wanted.includes(tipo)) return;
+    if (val_(r,'ACTIVO').toUpperCase()==='NO') return;
+    [val_(r,'CORREO_1','CORREO 1'),val_(r,'CORREO_2','CORREO 2')].forEach(mail=>{
+      String(mail||'').split(/[;,]/).forEach(x=>{
+        x=x.trim();
+        if(x && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x) && !emails.some(e=>e.toLowerCase()===x.toLowerCase())) emails.push(x);
+      });
+    });
+  });
+  return emails;
+}
+
+function requireEmailsByProfiles_(profiles,label) {
+  const emails=emailsByProfiles_(profiles);
+  if(!emails.length) throw new Error('No hay correos configurados en CORREO 1 / CORREO 2 para '+label+'.');
+  return emails;
 }
 
 function userRow_(usuario) {
@@ -156,15 +181,14 @@ function saveNoAdeudo_(b) {
 
   const folio=nextFolio_('NA',s.area,CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
   const now=new Date();
-  const u=userRow_(s.usuario)||{};
-  const correoDestino = val_(u,'CORREO_NO_ADEUDO','CORREO NO ADEUDO');
-  if (!correoDestino) throw new Error('El usuario no tiene CORREO_NO_ADEUDO configurado.');
+  const correosDestino=requireEmailsByProfiles_(['USUARIO','ADMINISTRADOR'],'USUARIO y ADMINISTRADOR');
+  const correoDestino=correosDestino.join(',');
 
   const obj={
     ID:Utilities.getUuid(), FOLIO:folio, AREA:s.area, FECHA_CREACION:now,
     RECAUDACION:d.recaudacion, MARCA:d.marca, AUTOBUS:d.autobus,
     CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor,
-    OBSERVACIONES:'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre, CORREO_DESTINO:correoDestino,
+    OBSERVACIONES:d.observaciones||'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre, CORREO_DESTINO:correoDestino,
     ESTATUS:'GENERADO', FECHA_ENVIO:'', URL_DOCUMENTO:''
   };
   const sh=sheet_(CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
@@ -192,27 +216,10 @@ function saveAclaracion_(b) {
   const now=new Date();
   const u=userRow_(s.usuario)||{};
   const destino=String(d.destinoAutorizacion).toUpperCase();
-  let correoAut='';
-  if (destino==='PRECEPTOR CRT') {
-    const usuarios = objects_(sheet_(CFG.SS_USUARIOS, CFG.SH_USUARIOS));
-    const preceptorCrt = usuarios.find(r =>
-      val_(r,'TIPO_CUENTA','TIPO DE CUENTA').toUpperCase()==='PRECEPTOR CRT' &&
-      val_(r,'ACTIVO').toUpperCase()!=='NO'
-    );
-    if (preceptorCrt) {
-      correoAut = val_(preceptorCrt,
-        'CORREO_USUARIO',
-        'CORREO_ACLARACION_PRECEPTOR',
-        'CORREO ACLARACION PRECEPTOR'
-      );
-    }
-  } else {
-    const emailKey = destino==='PRECEPTOR' ? ['CORREO_ACLARACION_PRECEPTOR','CORREO ACLARACION PRECEPTOR'] :
-                     destino==='ADMINISTRADOR' ? ['CORREO_ACLARACION_ADMIN','CORREO ACLARACION ADMIN'] :
-                     ['CORREO_ACLARACION_GERENTE','CORREO ACLARACION GERENTE'];
-    correoAut=val_.apply(null,[u].concat(emailKey));
-  }
-  if (!correoAut) throw new Error('No está configurado el correo para '+destino+'.');
+  const perfilesValidos=['PRECEPTOR','PRECEPTOR CRT','ADMINISTRADOR','GERENTE'];
+  if(!perfilesValidos.includes(destino)) throw new Error('Destino de autorización no válido.');
+  const correosAut=requireEmailsByProfiles_([destino],destino);
+  const correoAut=correosAut.join(',');
 
   const tokenAut=Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');
   const obj={
@@ -289,12 +296,10 @@ function processDecision_(tokenAut,decision,comentario,actor) {
   const fresh=objects_(sh).find(x=>val_(x,'FOLIO')===folio);
   const pdf=createPdf_('ACLARACION',fresh);
 
-  const creator=userRow_(val_(fresh,'CREADO_POR'))||{};
-  const destinoFinal=val_(creator,'CORREO_USUARIO') || val_(creator,'CORREO_ACLARACION_PRECEPTOR');
-  if (destinoFinal) {
-    sendMail_(destinoFinal,'Pase de Aclaración AUTORIZADO '+folio,
-      'El pase '+folio+' fue autorizado. Se adjunta el documento final.',pdf);
-  }
+  const correosFinales=requireEmailsByProfiles_(['USUARIO','ADMINISTRADOR'],'USUARIO y ADMINISTRADOR');
+  const destinoFinal=correosFinales.join(',');
+  sendMail_(destinoFinal,'Pase de Aclaración AUTORIZADO '+folio,
+    'El pase '+folio+' fue autorizado. Se adjunta el documento final.',pdf);
   updateByFolio_(sh,folio,{ESTATUS:'ENVIADO',FECHA_ENVIO_FINAL:new Date()});
   return {folio,estatus:'ENVIADO'};
 }

@@ -110,3 +110,14 @@ Pestaña `CONDUCTORES`:
 - Rediseño integral del portal: interfaz ejecutiva, tarjetas premium, jerarquía visual,
   formularios modernos, encabezado glass, dashboard corporativo y mejor responsive.
 - Se conserva PRECEPTOR CRT y toda la lógica funcional de v1.5.2.
+
+## v1.7 – Enrutamiento de correos por perfil
+La hoja USUARIOS usa `CORREO 1` y `CORREO 2` como únicas fuentes de destinatarios.
+- No Adeudo: se envía a TODOS los perfiles `USUARIO` + `ADMINISTRADOR`.
+- Aclaración / PRECEPTOR: a TODOS los `PRECEPTOR`.
+- Aclaración / PRECEPTOR CRT: a TODOS los `PRECEPTOR CRT`.
+- Aclaración / ADMINISTRADOR: a TODOS los `ADMINISTRADOR`.
+- Aclaración / GERENTE: a TODOS los `GERENTE`.
+- Al aprobar una aclaración: PDF final a TODOS los `USUARIO` + `ADMINISTRADOR`.
+- Se eliminan correos duplicados automáticamente, incluso si el mismo correo aparece en CORREO 1 y CORREO 2.
+- Se restauró Observaciones en No Adeudo; Aclaración continúa sin notas/observaciones.
