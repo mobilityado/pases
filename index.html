@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PASES | Mobility ADO</title>
+<style>
+:root{--p:#552583;--r:#c8202f;--n:#101828;--bg:#f5f7fb;--ok:#18864b;--warn:#b54708}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--n)}
+.top{background:linear-gradient(120deg,#35105d,#6d2aa6 58%,#c8202f);color:white;padding:18px 22px;box-shadow:0 4px 18px #0002}
+.brand{font-size:22px;font-weight:800}.sub{opacity:.82;font-size:12px}.wrap{max-width:1180px;margin:auto;padding:22px}
+.card{background:#fff;border-radius:18px;padding:22px;box-shadow:0 8px 28px #10182812;margin-bottom:18px}
+.login{max-width:430px;margin:8vh auto}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+label{font-size:12px;font-weight:700;color:#475467;display:block;margin-bottom:6px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #d0d5dd;border-radius:10px;font:inherit;background:white}
+textarea{min-height:90px;resize:vertical}.btn{border:0;border-radius:11px;padding:12px 16px;font-weight:800;cursor:pointer}
+.primary{background:var(--p);color:#fff}.red{background:var(--r);color:#fff}.ghost{background:#eef2f6}.ok{background:var(--ok);color:#fff}
+.menu{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.tile{padding:20px;border-radius:16px;color:#fff;cursor:pointer;min-height:110px}
+.tile b{display:block;font-size:17px;margin-top:12px}.purple{background:linear-gradient(135deg,#552583,#7d3bb4)}.crimson{background:linear-gradient(135deg,#a31222,#d83344)}.blue{background:linear-gradient(135deg,#155eef,#53b1fd)}.green{background:linear-gradient(135deg,#067647,#32d583)}
+.hide{display:none!important}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.spacer{flex:1}.badge{padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800;background:#eef2f6}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px;border-bottom:1px solid #eaecf0}th{color:#475467}
+.notice{padding:11px;border-radius:10px;background:#f2f4f7;font-size:13px}.driver-ok{background:#ecfdf3;color:#067647}.driver-new{background:#fffaeb;color:#b54708}
+h2{margin-top:0}@media(max-width:760px){.grid,.grid3,.menu{grid-template-columns:1fr}.wrap{padding:12px}.card{padding:16px}.menu{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="loginView" class="wrap">
+  <div class="card login">
+    <div style="text-align:center;margin-bottom:20px"><div style="font-size:28px;font-weight:900;color:#552583">MOBILITY ADO</div><div>Pases de No Adeudo y Aclaración</div></div>
+    <label>Usuario</label><input id="usuario" autocomplete="username">
+    <div style="height:12px"></div><label>Contraseña</label><input id="contrasena" type="password" autocomplete="current-password">
+    <div style="height:16px"></div><button class="btn primary" style="width:100%" onclick="login()">INICIAR SESIÓN</button>
+    <p id="loginMsg" class="notice hide"></p>
+  </div>
+</div>
+
+<div id="appView" class="hide">
+  <div class="top"><div class="row"><div><div class="brand">PASES | Mobility ADO</div><div class="sub" id="who"></div></div><div class="spacer"></div><button class="btn ghost" onclick="logout()">Cerrar sesión</button></div></div>
+  <div class="wrap">
+    <section id="home">
+      <div class="menu">
+        <div class="tile purple" onclick="show('noAdeudo')">🚌<b>Generar No Adeudo</b><span>Crear y enviar a Tráfico</span></div>
+        <div class="tile crimson" onclick="show('aclaracion')">📝<b>Generar Aclaración</b><span>Enviar a autorización</span></div>
+        <div class="tile blue" onclick="show('consulta');loadPasses()">🔎<b>Consultar Pases</b><span>Historial y estatus</span></div>
+        <div class="tile green" id="authTile" onclick="show('consulta');document.getElementById('fEstado').value='PENDIENTE';loadPasses()">✓<b>Pendientes</b><span>Autorizaciones</span></div>
+      </div>
+    </section>
+
+    <section id="noAdeudo" class="hide card">
+      <div class="row"><h2>Pase de No Adeudo</h2><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
+      <div class="grid3">
+        <div><label>Recaudación</label><input id="naRecaudacion"></div>
+        <div><label>Marca</label><input id="naMarca"></div>
+        <div><label>Autobús</label><input id="naAutobus"></div>
+      </div><br>
+      <div class="grid">
+        <div><label>Clave conductor</label><input id="naClave" onblur="driverLookup('na')"></div>
+        <div><label>Nombre conductor</label><input id="naNombre"></div>
+      </div>
+      <p id="naDriverMsg" class="notice hide"></p><br>
+      <button class="btn primary" onclick="saveNA()">Generar y enviar pase</button>
+      <p id="naMsg" class="notice hide"></p>
+    </section>
+
+    <section id="aclaracion" class="hide card">
+      <div class="row"><h2>Pase de Aclaración</h2><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
+      <div class="grid3">
+        <div><label>Fecha del evento</label><input id="acFecha" type="date"></div>
+        <div><label>Autobús</label><input id="acAutobus"></div>
+        <div><label>Enviar autorización a</label><select id="acDestino"><option>PRECEPTOR</option><option>ADMINISTRADOR</option><option>GERENTE</option></select></div>
+      </div><br>
+      <div class="grid">
+        <div><label>Clave conductor</label><input id="acClave" onblur="driverLookup('ac')"></div>
+        <div><label>Nombre conductor</label><input id="acNombre"></div>
+      </div>
+      <p id="acDriverMsg" class="notice hide"></p><br>
+      <label>Motivo / concepto del evento</label><textarea id="acMotivo"></textarea><br>
+      <label>Observaciones</label><textarea id="acObs"></textarea><br>
+      <button class="btn red" onclick="saveAC()">Enviar a autorización</button>
+      <p id="acMsg" class="notice hide"></p>
+    </section>
+
+    <section id="consulta" class="hide card">
+      <div class="row"><h2>Consulta de pases</h2><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
+      <div class="grid3">
+        <div><label>Buscar</label><input id="fQ" placeholder="Folio, conductor, autobús..." oninput="debounceLoad()"></div>
+        <div><label>Tipo</label><select id="fTipo" onchange="loadPasses()"><option value="TODOS">Todos</option><option value="NO_ADEUDO">No Adeudo</option><option value="ACLARACION">Aclaración</option></select></div>
+        <div><label>Estatus</label><select id="fEstado" onchange="loadPasses()"><option value="">Todos</option><option>PENDIENTE</option><option>AUTORIZADO</option><option>RECHAZADO</option><option>ENVIADO</option></select></div>
+      </div><br>
+      <div style="overflow:auto"><table><thead><tr><th>Folio</th><th>Tipo</th><th>Área</th><th>Conductor</th><th>Autobús</th><th>Estatus</th></tr></thead><tbody id="rows"></tbody></table></div>
+    </section>
+  </div>
+</div>
+
+<script>
+// Reemplaza únicamente si publicas una NUEVA implementación de Apps Script.
+const API_URL='https://script.google.com/macros/s/AKfycbzHAdx5d7agwt7IJ_Z3ai1A2f-9o0OZP7Rksmj-Fb_IUBEKZKdJL8vOmuxENgNsRGAz/exec';
+let token=sessionStorage.getItem('pases_token')||'', profile=JSON.parse(sessionStorage.getItem('pases_profile')||'null');
+
+async function api(action,payload={}){
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,token,...payload}),redirect:'follow'});
+  const j=await r.json(); if(!j.ok) throw new Error(j.error||'Error del servidor'); return j.data;
+}
+function init(){if(token&&profile) enter(); else document.getElementById('loginView').classList.remove('hide');}
+async function login(){try{msg('loginMsg','Validando...',false);const d=await api('login',{usuario:usuario.value,contrasena:contrasena.value});token=d.token;profile=d.profile;sessionStorage.setItem('pases_token',token);sessionStorage.setItem('pases_profile',JSON.stringify(profile));enter()}catch(e){msg('loginMsg',e.message,true)}}
+function enter(){loginView.classList.add('hide');appView.classList.remove('hide');who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;authTile.classList.toggle('hide',!['ADMINISTRADOR','PRECEPTOR','GERENTE'].includes(String(profile.tipo).toUpperCase()));}
+async function logout(){try{await api('logout')}catch(e){}sessionStorage.clear();location.reload()}
+function show(id){['home','noAdeudo','aclaracion','consulta'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id))}
+function msg(id,t,bad=false){const e=document.getElementById(id);e.textContent=t;e.className='notice '+(bad?'driver-new':'driver-ok');e.classList.remove('hide')}
+async function driverLookup(prefix){const clave=document.getElementById(prefix+'Clave').value.trim();if(!clave)return;try{const d=await api('findDriver',{clave});const n=document.getElementById(prefix+'Nombre');const m=document.getElementById(prefix+'Marca');if(d.found){n.value=d.nombre;if(m)m.value=d.marca;msg(prefix+'DriverMsg',`✓ ${d.clave} — ${d.nombre}${d.marca?' — '+d.marca:''}`)}else{n.value='';n.focus();msg(prefix+'DriverMsg','Conductor no registrado. Captura el nombre'+(m?' y marca':'')+'. Al generar el pase quedará guardado.',true)}}catch(e){msg(prefix+'DriverMsg',e.message,true)}}
+async function saveNA(){try{msg('naMsg','Generando pase y enviando correo...');const d=await api('saveNoAdeudo',{data:{recaudacion:naRecaudacion.value,marca:naMarca.value,autobus:naAutobus.value,claveConductor:naClave.value,nombreConductor:naNombre.value}});msg('naMsg',`✓ ${d.folio} generado y enviado correctamente.`)}catch(e){msg('naMsg',e.message,true)}}
+async function saveAC(){try{msg('acMsg','Registrando y enviando autorización...');const d=await api('saveAclaracion',{data:{fechaEvento:acFecha.value,motivoConcepto:acMotivo.value,autobus:acAutobus.value,claveConductor:acClave.value,nombreConductor:acNombre.value,observaciones:acObs.value,destinoAutorizacion:acDestino.value}});msg('acMsg',`✓ ${d.folio} enviado a ${d.enviadoA}.`)}catch(e){msg('acMsg',e.message,true)}}
+let timer;function debounceLoad(){clearTimeout(timer);timer=setTimeout(loadPasses,350)}
+async function loadPasses(){try{rows.innerHTML='<tr><td colspan="6">Cargando...</td></tr>';const a=await api('listPasses',{q:fQ.value,tipo:fTipo.value,estatus:fEstado.value});rows.innerHTML=a.length?a.map(x=>`<tr><td><b>${esc(x.folio)}</b></td><td>${x.tipo==='ACLARACION'?'Aclaración':'No Adeudo'}</td><td>${esc(x.area)}</td><td>${esc(x.claveConductor+' - '+x.nombreConductor)}</td><td>${esc(x.autobus)}</td><td><span class="badge">${esc(x.estatus)}</span></td></tr>`).join(''):'<tr><td colspan="6">Sin registros.</td></tr>'}catch(e){rows.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`}}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+init();
+</script>
+</body></html>
