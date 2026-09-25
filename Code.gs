@@ -139,13 +139,20 @@ function saveNoAdeudo_(b) {
   const s=session_(b.token);
   requireUserCreator_(s);
   const d=b.data||{};
-  required_(d,['recaudacion','marca','autobus','claveConductor','nombreConductor']);
+  required_(d,['recaudacion','autobus','claveConductor','nombreConductor']);
   if (!['VILLAHERMOSA','CARDENAS','CÁRDENAS'].includes(String(d.recaudacion||'').trim().toUpperCase())) throw new Error('Recaudación no válida.');
-  if (!['SURO','TRT','ADO'].includes(String(d.marca||'').trim().toUpperCase())) throw new Error('Marca no válida.');
 
+  // La hoja CONDUCTORES es la fuente oficial de la marca.
+  // Si la clave existe, NO se valida contra una lista fija: se usa exactamente la marca registrada.
   const driverInfo=findDriver_({token:b.token,clave:d.claveConductor});
-  if (driverInfo.found) d.marca=driverInfo.marca;
-  else ensureDriver_(d.claveConductor,d.nombreConductor,d.marca);
+  if (driverInfo.found) {
+    d.nombreConductor=driverInfo.nombre;
+    d.marca=driverInfo.marca;
+    if (!String(d.marca||'').trim()) throw new Error('El conductor existe, pero no tiene MARCA registrada en CONDUCTORES.');
+  } else {
+    if (!String(d.marca||'').trim()) throw new Error('Captura la marca del conductor nuevo.');
+    ensureDriver_(d.claveConductor,d.nombreConductor,d.marca);
+  }
 
   const folio=nextFolio_('NA',s.area,CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
   const now=new Date();

@@ -86,3 +86,9 @@ Pestaña `CONDUCTORES`:
 - Aclaración final muestra `GENERADO POR` y `AUTORIZADO POR`.
 - Portal rediseñado con apariencia ejecutiva: tarjetas blancas, acentos Mobility ADO, mejor jerarquía y tablas.
 - Sigue vigente la marca automática desde la pestaña CONDUCTORES.
+
+## Cambios v1.5
+- Corregido `Marca no válida`: la validación ocurría antes de consultar CONDUCTORES.
+- Si la clave existe, MARCA y NOMBRE se toman directamente de CONDUCTORES, sin lista fija.
+- Si la clave es nueva, la marca sí se captura manualmente y se guarda para futuras visitas.
+- Portal con nuevo dashboard ejecutivo, hero corporativo, logo real, encabezado profesional y accesos rápidos.
