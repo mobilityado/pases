@@ -45,6 +45,9 @@ function doPost(e) {
       case 'login': result = login_(body); break;
       case 'logout': result = logout_(body); break;
       case 'findDriver': result = findDriver_(body); break;
+      case 'adminAddDriver': result = adminAddDriver_(body); break;
+      case 'adminListDrivers': result = adminListDrivers_(body); break;
+      case 'adminStats': result = adminStats_(body); break;
       case 'saveNoAdeudo': result = saveNoAdeudo_(body); break;
       case 'saveAclaracion': result = saveAclaracion_(body); break;
       case 'listPasses': result = listPasses_(body); break;
@@ -157,6 +160,106 @@ function ensureDriver_(clave,nombre,marca) {
     appendObject_(sh,{CLAVE:clave,NOMBRE:nombre,MARCA:marca});
   }
 }
+
+
+function requireAdmin_(s) {
+  if (norm_(s.tipo)!=='ADMINISTRADOR') throw new Error('Módulo exclusivo para Administradores.');
+}
+
+function adminAddDriver_(b) {
+  const s=session_(b.token); requireAdmin_(s);
+  const d=b.data||{};
+  const clave=String(d.clave||'').trim();
+  const nombre=String(d.nombre||'').trim().toUpperCase();
+  const marca=String(d.marca||'').trim().toUpperCase();
+  if(!clave || !nombre || !marca) throw new Error('Captura clave, nombre y marca.');
+  const sh=sheet_(CFG.SS_USUARIOS,CFG.SH_CONDUCTORES);
+  const rows=objects_(sh);
+  if(rows.some(r=>val_(r,'CLAVE')===clave)) throw new Error('La clave '+clave+' ya existe en CONDUCTORES.');
+  appendObject_(sh,{CLAVE:clave,NOMBRE:nombre,MARCA:marca});
+  return {ok:true,clave:clave,nombre:nombre,marca:marca};
+}
+
+function adminListDrivers_(b) {
+  const s=session_(b.token); requireAdmin_(s);
+  const q=norm_(b.q||'');
+  let rows=objects_(sheet_(CFG.SS_USUARIOS,CFG.SH_CONDUCTORES)).map(r=>({
+    clave:val_(r,'CLAVE'),nombre:val_(r,'NOMBRE'),marca:val_(r,'MARCA')
+  }));
+  if(q) rows=rows.filter(r=>norm_(r.clave+' '+r.nombre+' '+r.marca).includes(q));
+  rows.sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre),'es'));
+  return rows.slice(0,1000);
+}
+
+function adminStats_(b) {
+  const s=session_(b.token); requireAdmin_(s);
+  const gran=String(b.granularity||'MONTH').toUpperCase();
+  if(!['WEEK','MONTH','YEAR'].includes(gran)) throw new Error('Periodo no válido.');
+
+  let all=[];
+  objects_(sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION)).forEach(r=>all.push({
+    tipo:'ACLARACION', fecha:val_(r,'FECHA_CREACION'), usuario:val_(r,'NOMBRE_CREADOR','CREADO_POR')||'SIN USUARIO'
+  }));
+  objects_(sheet_(CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO)).forEach(r=>all.push({
+    tipo:'NO_ADEUDO', fecha:val_(r,'FECHA_CREACION'), usuario:val_(r,'NOMBRE_CREADOR','CREADO_POR')||'SIN USUARIO'
+  }));
+
+  const now=new Date();
+  const items={};
+  all.forEach(x=>{
+    const d=parseDate_(x.fecha); if(!d || isNaN(d.getTime())) return;
+    const p=periodKey_(d,gran);
+    const key=p.key+'|'+x.usuario;
+    if(!items[key]) items[key]={period:p.key,label:p.label,sort:p.sort,usuario:x.usuario,total:0,noAdeudo:0,aclaracion:0};
+    items[key].total++;
+    if(x.tipo==='NO_ADEUDO') items[key].noAdeudo++; else items[key].aclaracion++;
+  });
+  let rows=Object.keys(items).map(k=>items[k]);
+  rows.sort((a,b)=>a.sort-b.sort || String(a.usuario).localeCompare(String(b.usuario),'es'));
+
+  const periods={};
+  rows.forEach(r=>{
+    if(!periods[r.period]) periods[r.period]={period:r.period,label:r.label,sort:r.sort,total:0,noAdeudo:0,aclaracion:0};
+    periods[r.period].total+=r.total; periods[r.period].noAdeudo+=r.noAdeudo; periods[r.period].aclaracion+=r.aclaracion;
+  });
+  let summary=Object.keys(periods).map(k=>periods[k]).sort((a,b)=>a.sort-b.sort);
+  const limit=gran==='WEEK'?12:(gran==='MONTH'?12:5);
+  summary=summary.slice(-limit);
+  const keep={}; summary.forEach(x=>keep[x.period]=true);
+  rows=rows.filter(x=>keep[x.period]);
+
+  const byUser={};
+  rows.forEach(r=>{
+    if(!byUser[r.usuario]) byUser[r.usuario]={usuario:r.usuario,total:0,noAdeudo:0,aclaracion:0};
+    byUser[r.usuario].total+=r.total; byUser[r.usuario].noAdeudo+=r.noAdeudo; byUser[r.usuario].aclaracion+=r.aclaracion;
+  });
+  const users=Object.keys(byUser).map(k=>byUser[k]).sort((a,b)=>b.total-a.total);
+  return {granularity:gran,summary:summary,rows:rows,users:users,
+    totals:{total:summary.reduce((a,x)=>a+x.total,0),noAdeudo:summary.reduce((a,x)=>a+x.noAdeudo,0),aclaracion:summary.reduce((a,x)=>a+x.aclaracion,0)}};
+}
+
+function parseDate_(v) {
+  if(v instanceof Date) return v;
+  if(!v) return null;
+  let d=new Date(v);
+  if(!isNaN(d.getTime())) return d;
+  const m=String(v).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  return m?new Date(Number(m[3]),Number(m[2])-1,Number(m[1])):null;
+}
+function periodKey_(d,gran) {
+  const y=d.getFullYear(), m=d.getMonth();
+  if(gran==='YEAR') return {key:String(y),label:String(y),sort:y};
+  if(gran==='MONTH') {
+    const names=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    return {key:y+'-'+String(m+1).padStart(2,'0'),label:names[m]+' '+y,sort:y*100+m};
+  }
+  const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day);
+  const first=new Date(x.getFullYear(),0,1);
+  const week=Math.ceil((((x-first)/86400000)+first.getDay()+1)/7);
+  return {key:x.getFullYear()+'-W'+String(week).padStart(2,'0'),label:'SEM '+week+' · '+x.getFullYear(),sort:x.getFullYear()*100+week};
+}
+
 
 /* ========================= NO ADEUDO ========================= */
 
