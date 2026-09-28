@@ -148,6 +148,67 @@ body{background:
 .chart{display:flex;align-items:flex-end;gap:10px;min-height:250px;padding:20px 10px 8px;border-bottom:1px solid #ddd}.barCol{flex:1;min-width:44px;text-align:center}.bar{margin:auto;width:min(46px,75%);background:linear-gradient(180deg,#7041ca,#4d1b7b);border-radius:9px 9px 3px 3px;min-height:3px;position:relative}.bar em{position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-style:normal;font-size:11px;font-weight:800}.barCol small{display:block;font-size:10px;margin-top:8px;color:#777;white-space:nowrap}
 .adminGrid{display:grid;grid-template-columns:1fr 1.4fr;gap:20px}.subcard{border:1px solid #ece7f2;border-radius:20px;padding:20px;background:#fcfbfe}
 @media(max-width:850px){.loginShell{grid-template-columns:1fr}.loginBrand{min-height:280px;padding:38px}.loginBrand h1{font-size:38px}.loginForm{padding:38px}.menu{grid-template-columns:1fr!important}.adminGrid,.kpis{grid-template-columns:1fr}.hero:after{font-size:34px}}
+
+/* ===== v2.1 · FONDO CINEMÁTICO ===== */
+html,body{min-height:100%;background:#210019!important}
+body{
+  background-image:
+    linear-gradient(rgba(22,0,20,.16),rgba(22,0,20,.28)),
+    url('pase-inteligente-bg.png')!important;
+  background-size:cover!important;
+  background-position:center center!important;
+  background-attachment:fixed!important;
+  background-repeat:no-repeat!important;
+}
+#loginView{background:transparent!important}
+.loginShell{
+  background:rgba(23,5,31,.34)!important;
+  border:1px solid rgba(255,255,255,.25)!important;
+  box-shadow:0 28px 90px rgba(0,0,0,.42)!important;
+  backdrop-filter:blur(13px) saturate(125%)!important;
+}
+.loginBrand{
+  background:linear-gradient(145deg,rgba(61,8,78,.72),rgba(109,18,112,.42))!important;
+  backdrop-filter:blur(4px);
+}
+.loginForm{
+  background:rgba(255,255,255,.88)!important;
+  backdrop-filter:blur(18px)!important;
+}
+#appView{min-height:100vh;background:transparent!important}
+.topbar{
+  background:rgba(31,3,38,.78)!important;
+  border-bottom:1px solid rgba(255,255,255,.16)!important;
+  color:white!important;
+}
+.topbar .brand,.topbar #who{color:white!important}
+.wrap{position:relative}
+.hero{
+  background:linear-gradient(115deg,rgba(54,7,72,.78),rgba(122,24,126,.54),rgba(31,2,38,.38))!important;
+  border:1px solid rgba(255,255,255,.22)!important;
+  box-shadow:0 20px 55px rgba(0,0,0,.28)!important;
+  backdrop-filter:blur(8px)!important;
+}
+#home .card,.tile,
+#noAdeudo.card,#aclaracion.card,#consulta.card,#conductores.card,#estadisticas.card{
+  background:rgba(255,255,255,.90)!important;
+  border:1px solid rgba(255,255,255,.46)!important;
+  box-shadow:0 16px 42px rgba(25,0,28,.22)!important;
+  backdrop-filter:blur(15px) saturate(120%)!important;
+}
+.tile{
+  background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(250,242,255,.86))!important;
+}
+.tile:hover{
+  transform:translateY(-6px) scale(1.01)!important;
+  box-shadow:0 22px 48px rgba(35,0,43,.32)!important;
+}
+.subcard,.kpi{background:rgba(255,255,255,.82)!important;backdrop-filter:blur(10px)}
+@media(max-width:850px){
+ body{background-position:58% center!important;background-attachment:scroll!important}
+ .loginShell{background:rgba(29,4,38,.5)!important}
+ .loginForm{background:rgba(255,255,255,.93)!important}
+}
 </style>
 </head>
 <body>
