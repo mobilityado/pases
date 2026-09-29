@@ -69,14 +69,20 @@ function doPost(e) {
 /* ========================= SESIÓN / USUARIOS ========================= */
 
 function loginUsers_() {
-  // Solo devuelve el identificador de acceso de cuentas activas.
-  // No expone nombre, correo, área, perfil ni ningún otro dato.
+  // Para el selector de acceso se muestra NOMBRE, pero el value sigue siendo USUARIO.
+  // No se exponen contraseña, correos, área ni perfil.
   const rows=objects_(sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS));
-  return [...new Set(rows
-    .filter(r=>val_(r,'ACTIVO').toUpperCase()!=='NO')
-    .map(r=>String(val_(r,'USUARIO')||'').trim())
-    .filter(Boolean))]
-    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+  const seen={};
+  const out=[];
+  rows.filter(r=>val_(r,'ACTIVO').toUpperCase()!=='NO').forEach(r=>{
+    const usuario=String(val_(r,'USUARIO')||'').trim();
+    const nombre=String(val_(r,'NOMBRE')||usuario).trim();
+    if(usuario && !seen[usuario.toUpperCase()]){
+      seen[usuario.toUpperCase()]=true;
+      out.push({usuario:usuario,nombre:nombre});
+    }
+  });
+  return out.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{numeric:true,sensitivity:'base'}));
 }
 
 function login_(b) {

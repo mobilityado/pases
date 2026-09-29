@@ -582,9 +582,9 @@ body{overflow-x:hidden!important;background:none!important}
     <div class="loginForm">
       <div class="eyebrow" style="color:#6a2ca0">MOVILITY ADO · ACCESO SEGURO</div>
       <h2>Bienvenido</h2><div class="intro">Ingresa con tu cuenta para continuar.</div>
-      <label>Usuario</label>
+      <label>Nombre</label>
       <select id="usuario" autocomplete="username">
-        <option value="">Cargando usuarios...</option>
+        <option value="">Cargando nombres...</option>
       </select>
       <div style="height:14px"></div><label>Contraseña</label><input id="contrasena" type="password" autocomplete="current-password" placeholder="Contraseña">
       <div style="height:20px"></div><button class="btn primary" style="width:100%" onclick="login()">ENTRAR</button>
@@ -751,8 +751,8 @@ async function init(){
 async function loadLoginUsers(){
  try{
   const users=await api('loginUsers');
-  usuario.innerHTML='<option value="">Selecciona tu usuario...</option>'+
-    users.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');
+  usuario.innerHTML='<option value="">Selecciona tu nombre...</option>'+
+    users.map(u=>`<option value="${esc(u.usuario)}">${esc(u.nombre)}</option>`).join('');
  }catch(e){
   usuario.innerHTML='<option value="">No fue posible cargar usuarios</option>';
   msg('loginMsg','No se pudo cargar la lista de usuarios. '+e.message,true);
