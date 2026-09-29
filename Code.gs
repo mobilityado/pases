@@ -1,6 +1,6 @@
 /**
  * PASES Mobility ADO - Backend Google Apps Script
- * v1.4 - 25/09/2026
+ * v1.5 - 29/09/2026
  *
  * IMPORTANTE:
  * 1) Este proyecto usa 3 archivos de Google Sheets por ID.
@@ -505,9 +505,22 @@ function processDecision_(tokenAut,decision,comentario,actor) {
     return {folio,estatus:'RECHAZADO'};
   }
 
-  updateByFolio_(sh,folio,{ESTATUS:'AUTORIZADO',AUTORIZADO_POR:actor,FECHA_AUTORIZACION:new Date(),
+  // Guardamos primero la autorización y forzamos a Sheets a escribirla antes de
+  // volver a leer la fila para generar el PDF. Esto evita que el PDF conserve
+  // el valor anterior "PENDIENTE DE AUTORIZACIÓN".
+  const autorizador=String(actor||'').trim() || String(val_(r,'DESTINO_AUTORIZACION')||'AUTORIZADOR').trim();
+  const fechaAutorizacion=new Date();
+  updateByFolio_(sh,folio,{ESTATUS:'AUTORIZADO',AUTORIZADO_POR:autorizador,FECHA_AUTORIZACION:fechaAutorizacion,
     COMENTARIO_AUTORIZADOR:comentario});
+  SpreadsheetApp.flush();
+
+  // Volvemos a leer la fila y, como protección adicional, usamos el mismo
+  // autorizador recién registrado al construir el PDF.
   const fresh=objects_(sh).find(x=>val_(x,'FOLIO')===folio);
+  if (!fresh) throw new Error('No se pudo recuperar el pase autorizado '+folio+'.');
+  fresh.ESTATUS='AUTORIZADO';
+  fresh.AUTORIZADO_POR=autorizador;
+  fresh.FECHA_AUTORIZACION=fechaAutorizacion;
   const pdf=createPdf_('ACLARACION',fresh);
 
   const correosFinales=requireEmailsByProfiles_(['USUARIO','ADMINISTRADOR'],'USUARIO y ADMINISTRADOR');
