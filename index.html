@@ -561,6 +561,13 @@ body{overflow-x:hidden!important;background:none!important}
 .rankMini strong{font-size:11px;color:#3d2747}.rankMini b{font-size:13px;color:#7925a2}
 @media(max-width:900px){.grid4{grid-template-columns:1fr 1fr}.passSummary{grid-template-columns:1fr}}
 @media(max-width:560px){.grid4{grid-template-columns:1fr}.adminConsultaTitle{display:block}.adminConsultaTitle span{display:block;margin-top:4px}}
+
+/* v3.5 · Usuario como selector en login */
+.loginForm select#usuario{
+ width:100%!important;height:52px!important;box-sizing:border-box!important;margin-top:7px!important;
+ border:1px solid #e5dce9!important;border-radius:11px!important;background:#fff!important;
+ color:#321043!important;padding:0 15px!important;font-size:14px!important;cursor:pointer!important;
+}
 </style>
 </head>
 <body>
@@ -575,7 +582,10 @@ body{overflow-x:hidden!important;background:none!important}
     <div class="loginForm">
       <div class="eyebrow" style="color:#6a2ca0">MOVILITY ADO · ACCESO SEGURO</div>
       <h2>Bienvenido</h2><div class="intro">Ingresa con tu cuenta para continuar.</div>
-      <label>Usuario</label><input id="usuario" autocomplete="username" placeholder="Selecciona o escribe tu usuario">
+      <label>Usuario</label>
+      <select id="usuario" autocomplete="username">
+        <option value="">Cargando usuarios...</option>
+      </select>
       <div style="height:14px"></div><label>Contraseña</label><input id="contrasena" type="password" autocomplete="current-password" placeholder="Contraseña">
       <div style="height:20px"></div><button class="btn primary" style="width:100%" onclick="login()">ENTRAR</button>
       <p id="loginMsg" class="notice hide"></p>
@@ -733,9 +743,24 @@ async function api(action,payload={}){
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,token,...payload}),redirect:'follow'});
   const j=await r.json(); if(!j.ok) throw new Error(j.error||'Error del servidor'); return j.data;
 }
-function init(){if(token&&profile) enter(); else document.getElementById('loginView').classList.remove('hide');}
+async function init(){
+ if(token&&profile){enter();return}
+ document.getElementById('loginView').classList.remove('hide');
+ await loadLoginUsers();
+}
+async function loadLoginUsers(){
+ try{
+  const users=await api('loginUsers');
+  usuario.innerHTML='<option value="">Selecciona tu usuario...</option>'+
+    users.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');
+ }catch(e){
+  usuario.innerHTML='<option value="">No fue posible cargar usuarios</option>';
+  msg('loginMsg','No se pudo cargar la lista de usuarios. '+e.message,true);
+ }
+}
 async function login(){try{msg('loginMsg','Validando...',false);const d=await api('login',{usuario:usuario.value,contrasena:contrasena.value});token=d.token;profile=d.profile;sessionStorage.setItem('pases_token',token);sessionStorage.setItem('pases_profile',JSON.stringify(profile));enter()}catch(e){msg('loginMsg',e.message,true)}}
 ['usuario','contrasena'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();login()}}));
+usuario?.addEventListener('change',()=>{if(usuario.value)contrasena.focus()});
 function enter(){loginView.classList.add('hide');appView.classList.remove('hide');who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;const role=String(profile.tipo).toUpperCase();authTile.classList.toggle('hide',!['ADMINISTRADOR','PRECEPTOR','PRECEPTOR CRT','GERENTE'].includes(role));document.querySelectorAll('.adminOnly').forEach(e=>e.style.display=role==='ADMINISTRADOR'?'flex':'none');const af=document.getElementById('adminPassFilters');if(af)af.classList.toggle('hide',role!=='ADMINISTRADOR');}
 async function logout(){try{await api('logout')}catch(e){}sessionStorage.clear();location.reload()}
 function show(id){['home','noAdeudo','aclaracion','consulta','conductores','estadisticas','usuariosAdmin'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id))}

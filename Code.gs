@@ -43,6 +43,7 @@ function doPost(e) {
 
     switch (action) {
       case 'login': result = login_(body); break;
+      case 'loginUsers': result = loginUsers_(); break;
       case 'logout': result = logout_(body); break;
       case 'findDriver': result = findDriver_(body); break;
       case 'adminAddDriver': result = adminAddDriver_(body); break;
@@ -66,6 +67,17 @@ function doPost(e) {
 }
 
 /* ========================= SESIÓN / USUARIOS ========================= */
+
+function loginUsers_() {
+  // Solo devuelve el identificador de acceso de cuentas activas.
+  // No expone nombre, correo, área, perfil ni ningún otro dato.
+  const rows=objects_(sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS));
+  return [...new Set(rows
+    .filter(r=>val_(r,'ACTIVO').toUpperCase()!=='NO')
+    .map(r=>String(val_(r,'USUARIO')||'').trim())
+    .filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+}
 
 function login_(b) {
   const user = String(b.usuario || '').trim().toUpperCase();
