@@ -765,7 +765,21 @@ async function login(){try{msg('loginMsg','Validando...',false);const d=await ap
 usuario?.addEventListener('change',()=>{if(usuario.value)contrasena.focus()});
 function enter(){loginView.classList.add('hide');appView.classList.remove('hide');who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;const role=String(profile.tipo).toUpperCase();authTile.classList.toggle('hide',!['ADMINISTRADOR','PRECEPTOR','PRECEPTOR CRT','GERENTE'].includes(role));document.querySelectorAll('.adminOnly').forEach(e=>e.style.display=role==='ADMINISTRADOR'?'flex':'none');const af=document.getElementById('adminPassFilters');if(af)af.classList.toggle('hide',role!=='ADMINISTRADOR');}
 async function logout(){try{await api('logout')}catch(e){}sessionStorage.clear();location.reload()}
-function show(id){['home','noAdeudo','aclaracion','consulta','conductores','estadisticas','usuariosAdmin'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id))}
+function clearPassForms(){
+ const fields=['naRecaudacion','naMarca','naAutobus','naClave','naNombre','naObs','acFecha','acAutobus','acClave','acNombre','acMarca','acMotivo'];
+ fields.forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+ const naRec=document.getElementById('naRecaudacion'); if(naRec) naRec.value='';
+ const acDest=document.getElementById('acDestino'); if(acDest) acDest.value='PRECEPTOR';
+ ['naNombre','naMarca','acNombre','acMarca'].forEach(id=>{const e=document.getElementById(id);if(e){e.readOnly=false}});
+ const naMarca=document.getElementById('naMarca'); if(naMarca) naMarca.placeholder='Se obtiene del conductor';
+ const acNombre=document.getElementById('acNombre'); if(acNombre) acNombre.placeholder='Se autocompleta';
+ const acMarca=document.getElementById('acMarca'); if(acMarca) acMarca.placeholder='Se autocompleta';
+ ['naDriverMsg','naMsg','acDriverMsg','acMsg'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent='';e.classList.add('hide')}});
+}
+function show(id){
+ if(id==='home' || id==='noAdeudo' || id==='aclaracion') clearPassForms();
+ ['home','noAdeudo','aclaracion','consulta','conductores','estadisticas','usuariosAdmin'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id));
+}
 function msg(id,t,bad=false){const e=document.getElementById(id);e.textContent=t;e.className='notice '+(bad?'driver-new':'driver-ok');e.classList.remove('hide')}
 async function driverLookup(prefix){
  const clave=document.getElementById(prefix+'Clave').value.trim();if(!clave)return;
