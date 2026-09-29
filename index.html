@@ -706,6 +706,8 @@ body{overflow-x:hidden!important;background:none!important}
             <option value="CARDENAS">CARDENAS</option>
             <option value="PRECEPTOR">PRECEPTOR</option>
             <option value="PRECEPTOR CRT">PRECEPTOR CRT</option>
+            <option value="TRAFICO VHT">TRAFICO VHT</option>
+            <option value="TRAFICO CRT">TRAFICO CRT</option>
           </select><br><br>
           <label>Área</label><input id="usArea" readonly placeholder="Se asigna según el tipo de cuenta"><br><br>
           <label>Correo 1</label><input id="usCorreo1" type="email" placeholder="correo@dominio.com"><br><br>
@@ -841,7 +843,7 @@ function setPassPeriod(p){
 
 function syncUserArea(){
  const p=usPerfil.value;
- const map={ADMINISTRADOR:'ADMINISTRADOR',VILLAHERMOSA:'VILLAHERMOSA',CARDENAS:'CARDENAS',PRECEPTOR:'VILLAHERMOSA','PRECEPTOR CRT':'CARDENAS'};
+ const map={ADMINISTRADOR:'ADMINISTRADOR',VILLAHERMOSA:'VILLAHERMOSA',CARDENAS:'CARDENAS',PRECEPTOR:'VILLAHERMOSA','PRECEPTOR CRT':'CARDENAS','TRAFICO VHT':'VILLAHERMOSA','TRAFICO CRT':'CARDENAS'};
  usArea.value=map[p]||'';
 }
 async function addUser(){

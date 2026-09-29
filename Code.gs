@@ -243,7 +243,7 @@ function adminAddUser_(b) {
   const activo=norm_(d.activo||'SI')==='NO'?'NO':'SI';
 
   if(!usuario || !contrasena || !nombre || !perfil) throw new Error('Captura usuario, contraseña, nombre y tipo de cuenta.');
-  const permitidos=['ADMINISTRADOR','VILLAHERMOSA','CARDENAS','PRECEPTOR','PRECEPTOR_CRT'];
+  const permitidos=['ADMINISTRADOR','VILLAHERMOSA','CARDENAS','PRECEPTOR','PRECEPTOR_CRT','TRAFICO_VHT','TRAFICO_CRT'];
   if(!permitidos.includes(perfil)) throw new Error('Tipo de cuenta no válido.');
 
   // La interfaz muestra VILLAHERMOSA/CARDENAS, pero internamente se conserva
@@ -254,6 +254,8 @@ function adminAddUser_(b) {
   else if(perfil==='CARDENAS'){tipo='USUARIO';area='CARDENAS';}
   else if(perfil==='PRECEPTOR'){tipo='PRECEPTOR';area='VILLAHERMOSA';}
   else if(perfil==='PRECEPTOR_CRT'){tipo='PRECEPTOR CRT';area='CARDENAS';}
+  else if(perfil==='TRAFICO_VHT'){tipo='TRAFICO VHT';area='VILLAHERMOSA';}
+  else if(perfil==='TRAFICO_CRT'){tipo='TRAFICO CRT';area='CARDENAS';}
 
   const sh=sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS);
   const rows=objects_(sh);
@@ -386,7 +388,13 @@ function saveNoAdeudo_(b) {
 
   const folio=nextFolio_('NA',s.area,CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
   const now=new Date();
-  const correosDestino=requireEmailsByProfiles_(['USUARIO','ADMINISTRADOR'],'USUARIO y ADMINISTRADOR');
+  const recaudacionNA=norm_(d.recaudacion||'');
+  const perfilTrafico=(recaudacionNA==='CARDENAS'||recaudacionNA==='CÁRDENAS')?'TRAFICO CRT':'TRAFICO VHT';
+  // Siempre reciben USUARIO + ADMINISTRADOR; además recibe el Tráfico de la recaudación seleccionada.
+  const correosDestino=requireEmailsByProfiles_(
+    ['USUARIO','ADMINISTRADOR',perfilTrafico],
+    'USUARIO, ADMINISTRADOR y '+perfilTrafico
+  );
   const correoDestino=correosDestino.join(',');
 
   const obj={
