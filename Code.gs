@@ -459,8 +459,8 @@ function saveAclaracion_(b) {
     '<p><b>Motivo:</b> '+esc_(d.motivoConcepto)+'</p>'+
     '<p><a href="'+yes+'" style="background:#18864b;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">AUTORIZAR</a> '+
     '<a href="'+no+'" style="background:#b42318;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">RECHAZAR</a></p></div>';
-  MailApp.sendEmail({to:correoAut,subject:'Autorización Pase de Aclaración '+folio,htmlBody:html,
-    body:'Pase '+folio+' pendiente de autorización.'});
+  sendMail_(correoAut,'Autorización Pase de Aclaración '+folio,
+    'Pase '+folio+' pendiente de autorización.',null,html);
   return {folio, estatus:'PENDIENTE', enviadoA:destino};
 }
 
@@ -707,8 +707,49 @@ function fmtDate_(v){
   return isNaN(d)?String(v):Utilities.formatDate(d,CFG.TZ,'dd/MM/yyyy');
 }
 
-function sendMail_(to,subject,body,pdf) {
-  MailApp.sendEmail({to,subject,body,attachments:[pdf]});
+/**
+ * Envía correos transaccionales mediante Brevo.
+ * La API key se guarda en Propiedades del script con el nombre BREVO_API_KEY.
+ * Remitente autenticado en Brevo: PASE INTELIGENTE <no-responder@automatepowerpages.xyz>
+ */
+function sendMail_(to,subject,body,pdf,htmlBody) {
+  const apiKey=PropertiesService.getScriptProperties().getProperty('BREVO_API_KEY');
+  if(!apiKey) throw new Error('Falta configurar BREVO_API_KEY en Propiedades del script.');
+
+  const recipients=String(to||'')
+    .split(/[;,]/)
+    .map(x=>x.trim())
+    .filter(Boolean)
+    .map(email=>({email:email}));
+  if(!recipients.length) throw new Error('No hay destinatarios para el correo.');
+
+  const payload={
+    sender:{name:'PASE INTELIGENTE',email:'no-responder@automatepowerpages.xyz'},
+    to:recipients,
+    subject:String(subject||''),
+    textContent:String(body||'')
+  };
+  if(htmlBody) payload.htmlContent=String(htmlBody);
+  if(pdf){
+    payload.attachment=[{
+      name:(typeof pdf.getName==='function' && pdf.getName()) ? pdf.getName() : 'pase.pdf',
+      content:Utilities.base64Encode(pdf.getBytes())
+    }];
+  }
+
+  const res=UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email',{
+    method:'post',
+    contentType:'application/json',
+    headers:{'api-key':apiKey,'accept':'application/json'},
+    payload:JSON.stringify(payload),
+    muteHttpExceptions:true
+  });
+  const code=res.getResponseCode();
+  const response=res.getContentText();
+  if(code<200 || code>=300){
+    throw new Error('Brevo no pudo enviar el correo (HTTP '+code+'): '+response);
+  }
+  return response ? JSON.parse(response) : {ok:true};
 }
 
 /* ========================= HELPERS ========================= */
