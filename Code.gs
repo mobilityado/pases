@@ -48,6 +48,9 @@ function doPost(e) {
       case 'adminAddDriver': result = adminAddDriver_(body); break;
       case 'adminListDrivers': result = adminListDrivers_(body); break;
       case 'adminStats': result = adminStats_(body); break;
+      case 'adminListUsers': result = adminListUsers_(body); break;
+      case 'adminAddUser': result = adminAddUser_(body); break;
+      case 'adminDeleteUser': result = adminDeleteUser_(body); break;
       case 'saveNoAdeudo': result = saveNoAdeudo_(body); break;
       case 'saveAclaracion': result = saveAclaracion_(body); break;
       case 'listPasses': result = listPasses_(body); break;
@@ -189,6 +192,87 @@ function adminListDrivers_(b) {
   if(q) rows=rows.filter(r=>norm_(r.clave+' '+r.nombre+' '+r.marca).includes(q));
   rows.sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre),'es'));
   return rows.slice(0,1000);
+}
+
+
+function adminListUsers_(b) {
+  const s=session_(b.token); requireAdmin_(s);
+  const q=norm_(b.q||'');
+  let rows=objects_(sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS)).map(r=>({
+    id:val_(r,'ID_USUARIO'),
+    usuario:val_(r,'USUARIO'),
+    nombre:val_(r,'NOMBRE'),
+    area:val_(r,'AREA'),
+    tipo:val_(r,'TIPO_CUENTA','TIPO DE CUENTA'),
+    correo1:val_(r,'CORREO_1','CORREO 1'),
+    correo2:val_(r,'CORREO_2','CORREO 2'),
+    activo:val_(r,'ACTIVO')||'SI'
+  }));
+  if(q) rows=rows.filter(r=>norm_([r.usuario,r.nombre,r.area,r.tipo,r.correo1,r.correo2].join(' ')).includes(q));
+  rows.sort((a,b)=>String(a.nombre||a.usuario).localeCompare(String(b.nombre||b.usuario),'es'));
+  return rows;
+}
+
+function adminAddUser_(b) {
+  const s=session_(b.token); requireAdmin_(s);
+  const d=b.data||{};
+  const usuario=String(d.usuario||'').trim().toUpperCase();
+  const contrasena=String(d.contrasena||'').trim();
+  const nombre=String(d.nombre||'').trim().toUpperCase();
+  const perfil=norm_(d.perfil||'');
+  const correo1=String(d.correo1||'').trim();
+  const correo2=String(d.correo2||'').trim();
+  const activo=norm_(d.activo||'SI')==='NO'?'NO':'SI';
+
+  if(!usuario || !contrasena || !nombre || !perfil) throw new Error('Captura usuario, contraseña, nombre y tipo de cuenta.');
+  const permitidos=['ADMINISTRADOR','VILLAHERMOSA','CARDENAS','PRECEPTOR','PRECEPTOR_CRT'];
+  if(!permitidos.includes(perfil)) throw new Error('Tipo de cuenta no válido.');
+
+  // La interfaz muestra VILLAHERMOSA/CARDENAS, pero internamente se conserva
+  // TIPO_CUENTA=USUARIO para no romper correos, permisos ni la lógica existente.
+  let tipo='', area='';
+  if(perfil==='ADMINISTRADOR'){tipo='ADMINISTRADOR';area='ADMINISTRADOR';}
+  else if(perfil==='VILLAHERMOSA'){tipo='USUARIO';area='VILLAHERMOSA';}
+  else if(perfil==='CARDENAS'){tipo='USUARIO';area='CARDENAS';}
+  else if(perfil==='PRECEPTOR'){tipo='PRECEPTOR';area='VILLAHERMOSA';}
+  else if(perfil==='PRECEPTOR_CRT'){tipo='PRECEPTOR CRT';area='CARDENAS';}
+
+  const sh=sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS);
+  const rows=objects_(sh);
+  if(rows.some(r=>norm_(val_(r,'USUARIO'))===norm_(usuario))) throw new Error('El usuario '+usuario+' ya existe.');
+  if(rows.some(r=>norm_(val_(r,'ID_USUARIO'))===norm_(usuario))) throw new Error('El ID '+usuario+' ya existe.');
+
+  appendObject_(sh,{
+    ID_USUARIO:usuario,
+    USUARIO:usuario,
+    'CONTRASEÑA':contrasena,
+    NOMBRE:nombre,
+    AREA:area,
+    TIPO_CUENTA:tipo,
+    CORREO_1:correo1,
+    CORREO_2:correo2,
+    ACTIVO:activo
+  });
+  return {ok:true,usuario:usuario,nombre:nombre,area:area,tipo:tipo};
+}
+
+function adminDeleteUser_(b) {
+  const s=session_(b.token); requireAdmin_(s);
+  const usuario=String(b.usuario||'').trim();
+  if(!usuario) throw new Error('Usuario no válido.');
+  if(norm_(usuario)===norm_(s.usuario)) throw new Error('No puedes eliminar la cuenta con la que tienes la sesión abierta.');
+
+  const sh=sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS);
+  const rows=objects_(sh);
+  const target=rows.find(r=>norm_(val_(r,'USUARIO'))===norm_(usuario));
+  if(!target) throw new Error('No se encontró el usuario.');
+
+  if(norm_(val_(target,'TIPO_CUENTA','TIPO DE CUENTA'))==='ADMINISTRADOR'){
+    const admins=rows.filter(r=>norm_(val_(r,'TIPO_CUENTA','TIPO DE CUENTA'))==='ADMINISTRADOR' && norm_(val_(r,'ACTIVO'))!=='NO');
+    if(admins.length<=1) throw new Error('No se puede eliminar el último administrador activo.');
+  }
+  sh.deleteRow(target.__row);
+  return {ok:true,usuario:usuario};
 }
 
 function adminStats_(b) {

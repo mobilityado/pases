@@ -540,6 +540,11 @@ body{overflow-x:hidden!important;background:none!important}
  .menu{grid-template-columns:1fr!important}
  .tile{min-height:102px!important}
 }
+
+/* v3.3 · Administración de usuarios */
+.miniHelp{margin-top:6px;font-size:11px;color:#81758b;line-height:1.35}
+.dangerMini{padding:7px 11px!important;background:#fff0f2!important;border:1px solid #f4c5cb!important;color:#b7192d!important;font-size:11px!important}
+#usuariosAdmin table{min-width:760px}
 </style>
 </head>
 <body>
@@ -579,6 +584,7 @@ body{overflow-x:hidden!important;background:none!important}
         <div class="tile green" id="authTile" onclick="show('consulta');document.getElementById('fEstado').value='PENDIENTE';loadPasses()"><span class="ico">✓</span><b>Pendientes</b><span>Autorizaciones por atender</span></div>
         <div class="tile purple adminOnly" id="driversTile" onclick="show('conductores');loadDrivers()"><span class="ico">👤</span><b>Alta de Conductores</b><span>Catálogo maestro de conductores</span></div>
         <div class="tile crimson adminOnly" id="statsTile" onclick="show('estadisticas');loadStats()"><span class="ico">📊</span><b>Estadísticas</b><span>Comparativa semanal, mensual y anual</span></div>
+        <div class="tile blue adminOnly" id="usersTile" onclick="show('usuariosAdmin');loadUsers()"><span class="ico">👥</span><b>Usuarios de la App</b><span>Crear y eliminar accesos</span></div>
       </div>
     </section>
 
@@ -646,6 +652,42 @@ body{overflow-x:hidden!important;background:none!important}
       </div>
     </section>
 
+
+    <section id="usuariosAdmin" class="hide card">
+      <div class="row"><div><div class="eyebrow" style="color:#6a2ca0">ADMINISTRACIÓN</div><h2>Usuarios de la App</h2></div><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
+      <div class="adminGrid">
+        <div class="subcard">
+          <h3>Crear usuario</h3>
+          <label>Usuario</label><input id="usUsuario" placeholder="Ej. 1417208">
+          <div class="miniHelp">El ID_USUARIO se generará automáticamente con el mismo valor de Usuario.</div><br>
+          <label>Contraseña</label><input id="usPass" type="text" placeholder="Contraseña"><br><br>
+          <label>Nombre completo</label><input id="usNombre" placeholder="Nombre completo"><br><br>
+          <label>Tipo de cuenta</label>
+          <select id="usPerfil" onchange="syncUserArea()">
+            <option value="">Selecciona...</option>
+            <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+            <option value="VILLAHERMOSA">VILLAHERMOSA</option>
+            <option value="CARDENAS">CARDENAS</option>
+            <option value="PRECEPTOR">PRECEPTOR</option>
+            <option value="PRECEPTOR CRT">PRECEPTOR CRT</option>
+          </select><br><br>
+          <label>Área</label><input id="usArea" readonly placeholder="Se asigna según el tipo de cuenta"><br><br>
+          <label>Correo 1</label><input id="usCorreo1" type="email" placeholder="correo@dominio.com"><br><br>
+          <label>Correo 2</label><input id="usCorreo2" type="email" placeholder="correo@dominio.com"><br><br>
+          <label>Activo</label><select id="usActivo"><option value="SI">SI</option><option value="NO">NO</option></select><br><br>
+          <button class="btn primary" onclick="addUser()">Crear usuario</button>
+          <p id="usMsg" class="notice hide"></p>
+        </div>
+        <div class="subcard">
+          <div class="row"><h3>Usuarios registrados</h3><div class="spacer"></div><input id="usQ" style="max-width:260px" placeholder="Buscar..." oninput="debounceUsers()"></div>
+          <div style="overflow:auto;max-height:560px"><table>
+            <thead><tr><th>Usuario</th><th>Nombre</th><th>Área</th><th>Tipo</th><th>Activo</th><th></th></tr></thead>
+            <tbody id="userRows"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+
     <section id="estadisticas" class="hide card">
       <div class="row"><div><div class="eyebrow" style="color:#6a2ca0">TABLERO EJECUTIVO</div><h2>Estadística de Pases Digitales</h2></div><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
       <div class="row" style="margin-top:12px"><div><label>Comparar por</label><select id="stGran" onchange="loadStats()"><option value="WEEK">Semanal</option><option value="MONTH" selected>Mensual</option><option value="YEAR">Anual</option></select></div></div>
@@ -669,7 +711,7 @@ function init(){if(token&&profile) enter(); else document.getElementById('loginV
 async function login(){try{msg('loginMsg','Validando...',false);const d=await api('login',{usuario:usuario.value,contrasena:contrasena.value});token=d.token;profile=d.profile;sessionStorage.setItem('pases_token',token);sessionStorage.setItem('pases_profile',JSON.stringify(profile));enter()}catch(e){msg('loginMsg',e.message,true)}}
 function enter(){loginView.classList.add('hide');appView.classList.remove('hide');who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;const role=String(profile.tipo).toUpperCase();authTile.classList.toggle('hide',!['ADMINISTRADOR','PRECEPTOR','PRECEPTOR CRT','GERENTE'].includes(role));document.querySelectorAll('.adminOnly').forEach(e=>e.style.display=role==='ADMINISTRADOR'?'flex':'none');}
 async function logout(){try{await api('logout')}catch(e){}sessionStorage.clear();location.reload()}
-function show(id){['home','noAdeudo','aclaracion','consulta','conductores','estadisticas'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id))}
+function show(id){['home','noAdeudo','aclaracion','consulta','conductores','estadisticas','usuariosAdmin'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id))}
 function msg(id,t,bad=false){const e=document.getElementById(id);e.textContent=t;e.className='notice '+(bad?'driver-new':'driver-ok');e.classList.remove('hide')}
 async function driverLookup(prefix){
  const clave=document.getElementById(prefix+'Clave').value.trim();if(!clave)return;
@@ -692,6 +734,45 @@ async function saveNA(){try{msg('naMsg','Generando pase y enviando correo...');c
 async function saveAC(){try{msg('acMsg','Registrando y enviando autorización...');const d=await api('saveAclaracion',{data:{fechaEvento:acFecha.value,motivoConcepto:acMotivo.value,autobus:acAutobus.value,claveConductor:acClave.value,nombreConductor:acNombre.value,marca:acMarca.value,destinoAutorizacion:acDestino.value}});msg('acMsg',`✓ ${d.folio} enviado a ${d.enviadoA}.`)}catch(e){msg('acMsg',e.message,true)}}
 let timer;function debounceLoad(){clearTimeout(timer);timer=setTimeout(loadPasses,350)}
 async function loadPasses(){try{rows.innerHTML='<tr><td colspan="6">Cargando...</td></tr>';const a=await api('listPasses',{q:fQ.value,tipo:fTipo.value,estatus:fEstado.value});rows.innerHTML=a.length?a.map(x=>`<tr><td><b>${esc(x.folio)}</b></td><td>${x.tipo==='ACLARACION'?'Aclaración':'No Adeudo'}</td><td>${esc(x.area)}</td><td>${esc(x.claveConductor+' - '+x.nombreConductor)}</td><td>${esc(x.autobus)}</td><td><span class="badge">${esc(x.estatus)}</span></td></tr>`).join(''):'<tr><td colspan="6">Sin registros.</td></tr>'}catch(e){rows.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`}}
+
+
+function syncUserArea(){
+ const p=usPerfil.value;
+ const map={ADMINISTRADOR:'ADMINISTRADOR',VILLAHERMOSA:'VILLAHERMOSA',CARDENAS:'CARDENAS',PRECEPTOR:'VILLAHERMOSA','PRECEPTOR CRT':'CARDENAS'};
+ usArea.value=map[p]||'';
+}
+async function addUser(){
+ try{
+  msg('usMsg','Creando usuario...');
+  const d=await api('adminAddUser',{data:{
+    usuario:usUsuario.value,contrasena:usPass.value,nombre:usNombre.value,perfil:usPerfil.value,
+    correo1:usCorreo1.value,correo2:usCorreo2.value,activo:usActivo.value
+  }});
+  msg('usMsg',`✓ ${d.usuario} — ${d.nombre} creado correctamente.`);
+  usUsuario.value='';usPass.value='';usNombre.value='';usPerfil.value='';usArea.value='';
+  usCorreo1.value='';usCorreo2.value='';usActivo.value='SI';loadUsers();
+ }catch(e){msg('usMsg',e.message,true)}
+}
+let userTimer;
+function debounceUsers(){clearTimeout(userTimer);userTimer=setTimeout(loadUsers,300)}
+async function loadUsers(){
+ try{
+  userRows.innerHTML='<tr><td colspan="6">Cargando...</td></tr>';
+  const a=await api('adminListUsers',{q:usQ.value});
+  userRows.innerHTML=a.length?a.map(x=>`<tr>
+   <td><b>${esc(x.usuario)}</b></td><td>${esc(x.nombre)}</td><td>${esc(x.area)}</td>
+   <td><span class="badge">${esc(x.tipo)}</span></td><td>${esc(x.activo)}</td>
+   <td><button class="btn dangerMini" onclick="deleteUser('${String(x.usuario).replace(/'/g,"\\'")}')">Eliminar</button></td>
+  </tr>`).join(''):'<tr><td colspan="6">Sin usuarios.</td></tr>';
+ }catch(e){userRows.innerHTML=`<tr><td colspan="6">${esc(e.message)}</td></tr>`}
+}
+async function deleteUser(usuario){
+ if(!confirm(`¿Eliminar el usuario ${usuario}? Esta acción lo quitará de la hoja USUARIOS.`)) return;
+ try{
+  await api('adminDeleteUser',{usuario});
+  loadUsers();
+ }catch(e){alert(e.message)}
+}
 
 async function addDriver(){
  try{
