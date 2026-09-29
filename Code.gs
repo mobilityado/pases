@@ -499,18 +499,35 @@ function listPasses_(b) {
   const q=String(b.q||'').trim().toUpperCase();
   const tipo=String(b.tipo||'TODOS').toUpperCase();
   const status=String(b.estatus||'').toUpperCase();
+  const isAdmin=String(s.tipo).toUpperCase()==='ADMINISTRADOR';
+  const desde=String(b.desde||'').trim();
+  const hasta=String(b.hasta||'').trim();
+  const creador=String(b.creador||'').trim().toUpperCase();
 
   let all=[];
   if (tipo==='TODOS'||tipo==='ACLARACION') all=all.concat(objects_(sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION)).map(r=>normPass_(r,'ACLARACION')));
   if (tipo==='TODOS'||tipo==='NO_ADEUDO') all=all.concat(objects_(sheet_(CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO)).map(r=>normPass_(r,'NO_ADEUDO')));
 
-  if (String(s.tipo).toUpperCase()!=='ADMINISTRADOR') {
+  if (!isAdmin) {
     all=all.filter(x=>String(x.area).toUpperCase()===String(s.area).toUpperCase());
+  } else {
+    // Estos filtros son deliberadamente exclusivos para administradores.
+    if (desde) {
+      const d0=new Date(desde+'T00:00:00');
+      all=all.filter(x=>{const d=new Date(x.fechaCreacion); return !isNaN(d)&&d>=d0;});
+    }
+    if (hasta) {
+      const d1=new Date(hasta+'T23:59:59');
+      all=all.filter(x=>{const d=new Date(x.fechaCreacion); return !isNaN(d)&&d<=d1;});
+    }
+    if (creador) {
+      all=all.filter(x=>String(x.creadoPor||'').toUpperCase()===creador || String(x.nombreCreador||'').toUpperCase()===creador);
+    }
   }
   if (status) all=all.filter(x=>String(x.estatus).toUpperCase()===status);
   if (q) all=all.filter(x=>JSON.stringify(x).toUpperCase().includes(q));
   all.sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
-  return all.slice(0,500);
+  return all.slice(0,2000);
 }
 
 function getPass_(b) {
@@ -751,7 +768,8 @@ function normPass_(r,tipo) {
     folio:val_(r,'FOLIO'), tipo, area:val_(r,'AREA'),
     fechaCreacion:val_(r,'FECHA_CREACION'), autobus:val_(r,'AUTOBUS'),
     claveConductor:val_(r,'CLAVE_CONDUCTOR'), nombreConductor:val_(r,'NOMBRE_CONDUCTOR'),
-    estatus:val_(r,'ESTATUS'), creadoPor:val_(r,'CREADO_POR')
+    estatus:val_(r,'ESTATUS'), creadoPor:val_(r,'CREADO_POR'),
+    nombreCreador:val_(r,'NOMBRE_CREADOR','CREADO_POR')
   };
 }
 
