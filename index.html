@@ -604,15 +604,9 @@ body{overflow-x:hidden!important;background:none!important}
       </div>
       <div class="sectionTitle"><b>Accesos rápidos</b><span>Selecciona una operación</span></div>
       <div class="menu">
-        <div id="tileNoAdeudo"
-     class="tile purple role-user-admin"
-     onclick="show('noAdeudo')">
-        <div id="tileAclaracion"
-     class="tile crimson role-user-admin"
-     onclick="show('aclaracion')">
-        <div id="tileConsulta"
-     class="tile blue"
-     onclick="show('consulta');loadPasses()">
+        <div class="tile purple role-user-admin" onclick="show('noAdeudo')"><span class="ico">🚌</span><b>Pases de No Adeudo</b><span>Genera y envía pases digitales</span></div>
+        <div class="tile crimson role-user-admin" onclick="show('aclaracion')"><span class="ico">📝</span><b>Aclaraciones</b><span>Solicita y da seguimiento</span></div>
+        <div class="tile blue" onclick="show('consulta');loadPasses()"><span class="ico">🔎</span><b>Consulta de Pases</b><span>Historial y estatus</span></div>
         <div class="tile green authOnly" id="authTile" onclick="show('consulta');document.getElementById('fEstado').value='PENDIENTE';loadPasses()"><span class="ico">✓</span><b>Pendientes</b><span>Autorizaciones por atender</span></div>
         <div class="tile purple adminOnly" id="driversTile" onclick="show('conductores');loadDrivers()"><span class="ico">👤</span><b>Alta de Conductores</b><span>Catálogo maestro de conductores</span></div>
         <div class="tile crimson adminOnly" id="statsTile" onclick="show('estadisticas');loadStats()"><span class="ico">📊</span><b>Estadísticas</b><span>Comparativa semanal, mensual y anual</span></div>
@@ -770,86 +764,21 @@ async function login(){try{msg('loginMsg','Validando...',false);const d=await ap
 ['usuario','contrasena'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();login()}}));
 usuario?.addEventListener('change',()=>{if(usuario.value)contrasena.focus()});
 function enter(){
+  loginView.classList.add('hide');
+  appView.classList.remove('hide');
 
-  loginView.classList.add('hide');
-  appView.classList.remove('hide');
+  const role = String(profile?.tipo || '').trim().toUpperCase();
 
-  const role = String(profile?.tipo || '')
-      .trim()
-      .toUpperCase();
+  const isAdmin = role === 'ADMINISTRADOR';
+  const isUser = role === 'USUARIO';
 
-  who.textContent =
-      `${profile.nombre} · ${profile.tipo} · ${profile.area}`;
-
-  const tileNoAdeudo   = document.getElementById('tileNoAdeudo');
-  const tileAclaracion = document.getElementById('tileAclaracion');
-  const tileConsulta   = document.getElementById('tileConsulta');
-
-  const authTile    = document.getElementById('authTile');
-  const driversTile = document.getElementById('driversTile');
-  const statsTile   = document.getElementById('statsTile');
-  const usersTile   = document.getElementById('usersTile');
-
-  [
-      tileNoAdeudo,
-      tileAclaracion,
-      tileConsulta,
-      authTile,
-      driversTile,
-      statsTile,
-      usersTile
-  ].forEach(e => {
-      if(e) e.style.display = 'none';
-  });
-
-  switch(role){
-
-      case 'ADMINISTRADOR':
-
-          tileNoAdeudo.style.display = '';
-          tileAclaracion.style.display = '';
-          tileConsulta.style.display = '';
-          authTile.style.display = '';
-          driversTile.style.display = '';
-          statsTile.style.display = '';
-          usersTile.style.display = '';
-          break;
-
-      case 'USUARIO':
-
-          tileNoAdeudo.style.display = '';
-          tileAclaracion.style.display = '';
-          tileConsulta.style.display = '';
-          break;
-
-      case 'PRECEPTOR':
-      case 'PRECEPTOR CRT':
-      case 'TRAFICO VHT':
-      case 'TRAFICO CRT':
-
-          tileConsulta.style.display = '';
-          authTile.style.display = '';
-          break;
-
-      case 'GERENTE':
-
-          tileConsulta.style.display = '';
-          authTile.style.display = '';
-          statsTile.style.display = '';
-          break;
-  }
-
-  const af = document.getElementById('adminPassFilters');
-
-  if(af){
-      af.classList.toggle(
-          'hide',
-          role !== 'ADMINISTRADOR'
-      );
-  }
-
-  show('home');
-}
+  const isAuthorizer = [
+    'PRECEPTOR',
+    'PRECEPTOR CRT',
+    'TRAFICO VHT',
+    'TRAFICO CRT',
+    'GERENTE'
+  ].includes(role);
 
   // Mostrar identidad del usuario
   who.textContent = `${profile.nombre} · ${profile.tipo} · ${profile.area}`;
