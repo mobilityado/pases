@@ -754,7 +754,7 @@ async function loadLoginUsers(){
  try{
   const users=await api('loginUsers');
   usuario.innerHTML='<option value="">Selecciona tu nombre...</option>'+
-    users.map(u=>`<option value="${esc(u.usuario)}">${esc(u.nombre)}</option>`).join('');
+    users.map(u=>`<option value="${esc(u.key || u.usuario)}">${esc(u.nombre)}</option>`).join('');
  }catch(e){
   usuario.innerHTML='<option value="">No fue posible cargar usuarios</option>';
   msg('loginMsg','No se pudo cargar la lista de usuarios. '+e.message,true);

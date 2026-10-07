@@ -69,38 +69,50 @@ function doPost(e) {
 /* ========================= SESIÓN / USUARIOS ========================= */
 
 function loginUsers_() {
-  // Para el selector de acceso se muestra NOMBRE, pero el value sigue siendo USUARIO.
-  // No se exponen contraseña, correos, área ni perfil.
+  // Cada fila activa es una cuenta independiente en el selector.
+  // Antes se eliminaban duplicados por USUARIO, lo que ocultaba nombres
+  // distintos que comparten una cuenta/clave (por ejemplo CAJERO, PRECEPTOR, etc.).
+  // __row es un identificador interno de la fila y NO se muestra al usuario.
   const rows=objects_(sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS));
-  const seen={};
   const out=[];
   rows.filter(r=>val_(r,'ACTIVO').toUpperCase()!=='NO').forEach(r=>{
     const usuario=String(val_(r,'USUARIO')||'').trim();
     const nombre=String(val_(r,'NOMBRE')||usuario).trim();
-    if(usuario && !seen[usuario.toUpperCase()]){
-      seen[usuario.toUpperCase()]=true;
-      out.push({usuario:usuario,nombre:nombre});
+    if(usuario){
+      out.push({key:String(r.__row),usuario:usuario,nombre:nombre});
     }
   });
   return out.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es',{numeric:true,sensitivity:'base'}));
 }
 
 function login_(b) {
-  const user = String(b.usuario || '').trim().toUpperCase();
+  const key = String(b.usuario || '').trim();
   const pass = String(b.contrasena || '').trim();
-  if (!user || !pass) throw new Error('Captura usuario y contraseña.');
+  if (!key || !pass) throw new Error('Captura usuario y contraseña.');
 
   const rows = objects_(sheet_(CFG.SS_USUARIOS, CFG.SH_USUARIOS));
-  const found = rows.find(r =>
-    val_(r,'USUARIO').toUpperCase() === user &&
-    val_(r,'CONTRASEÑA','CONTRASENA') === pass &&
-    val_(r,'ACTIVO').toUpperCase() !== 'NO'
-  );
+  // El selector envía la fila exacta para que dos personas con el mismo
+  // USUARIO puedan iniciar sesión y recibir su propio perfil.
+  let found = null;
+  if (/^\d+$/.test(key)) {
+    const rowNumber=Number(key);
+    found=rows.find(r => Number(r.__row)===rowNumber);
+  }
+  // Compatibilidad con sesiones/enlaces antiguos que todavía envíen USUARIO.
+  if(!found){
+    const user = key.toUpperCase();
+    found = rows.find(r =>
+      val_(r,'USUARIO').toUpperCase() === user &&
+      val_(r,'CONTRASEÑA','CONTRASENA') === pass &&
+      val_(r,'ACTIVO').toUpperCase() !== 'NO'
+    );
+  }
+  if(found && (val_(found,'ACTIVO').toUpperCase()==='NO' || val_(found,'CONTRASEÑA','CONTRASENA') !== pass)) found=null;
   if (!found) throw new Error('Usuario o contraseña incorrectos.');
 
   const token = Utilities.getUuid() + Utilities.getUuid();
   const profile = {
-    id: val_(found,'ID_USUARIO') || user,
+    id: val_(found,'ID_USUARIO') || val_(found,'USUARIO'),
     usuario: val_(found,'USUARIO'),
     nombre: val_(found,'NOMBRE') || val_(found,'USUARIO'),
     area: val_(found,'AREA'),
