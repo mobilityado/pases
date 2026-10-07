@@ -764,24 +764,98 @@ async function login(){try{msg('loginMsg','Validando...',false);const d=await ap
 ['usuario','contrasena'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();login()}}));
 usuario?.addEventListener('change',()=>{if(usuario.value)contrasena.focus()});
 function enter(){
- loginView.classList.add('hide');
- appView.classList.remove('hide');
- who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;
- const role=String(profile.tipo||'').trim().toUpperCase();
- const isAdmin=role==='ADMINISTRADOR';
- const isUser=role==='USUARIO';
- const isAuthorizer=['PRECEPTOR','PRECEPTOR CRT','TRAFICO VHT','TRAFICO CRT','GERENTE'].includes(role);
- // USUARIO: No Adeudo + Aclaraciones + Consulta.
- // PRECEPTOR / PRECEPTOR CRT / TRAFICO VHT / TRAFICO CRT / GERENTE: solo Consulta.
- // ADMINISTRADOR: todo.
- document.querySelectorAll('.role-user-admin').forEach(e=>e.style.display=(isUser||isAdmin)?'flex':'none');
- document.querySelectorAll('.adminOnly').forEach(e=>e.style.display=isAdmin?'flex':'none');
- // La opción de pendientes no forma parte del menú permitido para los perfiles solicitados.
- const auth=document.getElementById('authTile');
- if(auth) auth.style.display=isAdmin?'flex':'none';
- const af=document.getElementById('adminPassFilters');
- if(af) af.classList.toggle('hide',!isAdmin);
-} 
+  loginView.classList.add('hide');
+  appView.classList.remove('hide');
+
+  const role = String(profile?.tipo || '').trim().toUpperCase();
+
+  const isAdmin = role === 'ADMINISTRADOR';
+  const isUser = role === 'USUARIO';
+
+  const isAuthorizer = [
+    'PRECEPTOR',
+    'PRECEPTOR CRT',
+    'TRAFICO VHT',
+    'TRAFICO CRT',
+    'GERENTE'
+  ].includes(role);
+
+  // Mostrar identidad del usuario
+  who.textContent = `${profile.nombre} · ${profile.tipo} · ${profile.area}`;
+
+  // =====================================================
+  // OCULTAR TODO EL MENÚ PRIMERO
+  // =====================================================
+
+  const menuItems = [
+    'noAdeudo',
+    'aclaracion',
+    'consulta',
+    'authTile',
+    'conductores',
+    'estadisticas',
+    'usuariosAdmin'
+  ];
+
+  menuItems.forEach(id => {
+    const e = document.getElementById(id);
+    if (e) {
+      e.style.display = 'none';
+    }
+  });
+
+  // =====================================================
+  // USUARIO
+  // No Adeudo + Aclaraciones + Consulta
+  // =====================================================
+
+  if (isUser) {
+    const noAdeudo = document.getElementById('noAdeudo');
+    const aclaracion = document.getElementById('aclaracion');
+    const consulta = document.getElementById('consulta');
+
+    if (noAdeudo) noAdeudo.style.display = 'block';
+    if (aclaracion) aclaracion.style.display = 'block';
+    if (consulta) consulta.style.display = 'block';
+  }
+
+  // =====================================================
+  // PRECEPTOR / TRAFICO / GERENTE
+  // Solo Consulta
+  // =====================================================
+
+  if (isAuthorizer) {
+    const consulta = document.getElementById('consulta');
+
+    if (consulta) {
+      consulta.style.display = 'block';
+    }
+  }
+
+  // =====================================================
+  // ADMINISTRADOR
+  // Todo
+  // =====================================================
+
+  if (isAdmin) {
+    menuItems.forEach(id => {
+      const e = document.getElementById(id);
+      if (e) {
+        e.style.display = 'block';
+      }
+    });
+  }
+
+  // =====================================================
+  // FILTROS ADMINISTRATIVOS
+  // =====================================================
+
+  const af = document.getElementById('adminPassFilters');
+
+  if (af) {
+    af.classList.toggle('hide', !isAdmin);
+  }
+}
 async function logout(){try{await api('logout')}catch(e){}sessionStorage.clear();location.reload()}
 function clearPassForms(){
  const fields=['naRecaudacion','naMarca','naAutobus','naClave','naNombre','naObs','acFecha','acAutobus','acClave','acNombre','acMarca','acMotivo'];
