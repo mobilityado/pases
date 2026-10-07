@@ -583,6 +583,7 @@ function processDecision_(tokenAut,decision,comentario,actor) {
 
 function listPasses_(b) {
   const s=session_(b.token);
+  requirePassConsulta_(s);
   const q=String(b.q||'').trim().toUpperCase();
   const tipo=String(b.tipo||'TODOS').toUpperCase();
   const status=String(b.estatus||'').toUpperCase();
@@ -892,7 +893,15 @@ function val_(o) {
 }
 function norm_(s){return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');}
 function required_(o,keys){keys.forEach(k=>{if(!String(o[k]||'').trim())throw new Error('Falta el campo '+k+'.');});}
-function requireUserCreator_(s){if(!['USUARIO','ADMINISTRADOR'].includes(String(s.tipo||'').toUpperCase()))throw new Error('Tu perfil no puede generar pases.');}
+function requireUserCreator_(s){
+  const tipo=norm_(s.tipo);
+  if(!['USUARIO','ADMINISTRADOR'].includes(tipo)) throw new Error('Tu perfil no puede generar pases.');
+}
+function requirePassConsulta_(s){
+  const tipo=norm_(s.tipo);
+  const permitidos=['USUARIO','ADMINISTRADOR','PRECEPTOR','PRECEPTOR_CRT','TRAFICO_VHT','TRAFICO_CRT','GERENTE'];
+  if(!permitidos.includes(tipo)) throw new Error('Tu perfil no tiene acceso a la consulta de pases.');
+}
 function fmt_(v){if(!v)return ''; const d=new Date(v); return isNaN(d)?String(v):Utilities.formatDate(d,CFG.TZ,'dd/MM/yyyy HH:mm');}
 function json_(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}
 function esc_(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}

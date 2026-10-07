@@ -604,10 +604,10 @@ body{overflow-x:hidden!important;background:none!important}
       </div>
       <div class="sectionTitle"><b>Accesos rápidos</b><span>Selecciona una operación</span></div>
       <div class="menu">
-        <div class="tile purple" onclick="show('noAdeudo')"><span class="ico">🚌</span><b>Pases de No Adeudo</b><span>Genera y envía pases digitales</span></div>
-        <div class="tile crimson" onclick="show('aclaracion')"><span class="ico">📝</span><b>Aclaraciones</b><span>Solicita y da seguimiento</span></div>
+        <div class="tile purple role-user-admin" onclick="show('noAdeudo')"><span class="ico">🚌</span><b>Pases de No Adeudo</b><span>Genera y envía pases digitales</span></div>
+        <div class="tile crimson role-user-admin" onclick="show('aclaracion')"><span class="ico">📝</span><b>Aclaraciones</b><span>Solicita y da seguimiento</span></div>
         <div class="tile blue" onclick="show('consulta');loadPasses()"><span class="ico">🔎</span><b>Consulta de Pases</b><span>Historial y estatus</span></div>
-        <div class="tile green" id="authTile" onclick="show('consulta');document.getElementById('fEstado').value='PENDIENTE';loadPasses()"><span class="ico">✓</span><b>Pendientes</b><span>Autorizaciones por atender</span></div>
+        <div class="tile green authOnly" id="authTile" onclick="show('consulta');document.getElementById('fEstado').value='PENDIENTE';loadPasses()"><span class="ico">✓</span><b>Pendientes</b><span>Autorizaciones por atender</span></div>
         <div class="tile purple adminOnly" id="driversTile" onclick="show('conductores');loadDrivers()"><span class="ico">👤</span><b>Alta de Conductores</b><span>Catálogo maestro de conductores</span></div>
         <div class="tile crimson adminOnly" id="statsTile" onclick="show('estadisticas');loadStats()"><span class="ico">📊</span><b>Estadísticas</b><span>Comparativa semanal, mensual y anual</span></div>
         <div class="tile blue adminOnly" id="usersTile" onclick="show('usuariosAdmin');loadUsers()"><span class="ico">👥</span><b>Usuarios de la App</b><span>Crear y eliminar accesos</span></div>
@@ -763,7 +763,25 @@ async function loadLoginUsers(){
 async function login(){try{msg('loginMsg','Validando...',false);const d=await api('login',{usuario:usuario.value,contrasena:contrasena.value});token=d.token;profile=d.profile;sessionStorage.setItem('pases_token',token);sessionStorage.setItem('pases_profile',JSON.stringify(profile));enter()}catch(e){msg('loginMsg',e.message,true)}}
 ['usuario','contrasena'].forEach(id=>document.getElementById(id)?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();login()}}));
 usuario?.addEventListener('change',()=>{if(usuario.value)contrasena.focus()});
-function enter(){loginView.classList.add('hide');appView.classList.remove('hide');who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;const role=String(profile.tipo).toUpperCase();authTile.classList.toggle('hide',!['ADMINISTRADOR','PRECEPTOR','PRECEPTOR CRT','GERENTE'].includes(role));document.querySelectorAll('.adminOnly').forEach(e=>e.style.display=role==='ADMINISTRADOR'?'flex':'none');const af=document.getElementById('adminPassFilters');if(af)af.classList.toggle('hide',role!=='ADMINISTRADOR');}
+function enter(){
+ loginView.classList.add('hide');
+ appView.classList.remove('hide');
+ who.textContent=`${profile.nombre} · ${profile.tipo} · ${profile.area}`;
+ const role=String(profile.tipo||'').trim().toUpperCase();
+ const isAdmin=role==='ADMINISTRADOR';
+ const isUser=role==='USUARIO';
+ const isAuthorizer=['PRECEPTOR','PRECEPTOR CRT','TRAFICO VHT','TRAFICO CRT','GERENTE'].includes(role);
+ // USUARIO: No Adeudo + Aclaraciones + Consulta.
+ // PRECEPTOR / PRECEPTOR CRT / TRAFICO VHT / TRAFICO CRT / GERENTE: solo Consulta.
+ // ADMINISTRADOR: todo.
+ document.querySelectorAll('.role-user-admin').forEach(e=>e.style.display=(isUser||isAdmin)?'flex':'none');
+ document.querySelectorAll('.adminOnly').forEach(e=>e.style.display=isAdmin?'flex':'none');
+ // La opción de pendientes no forma parte del menú permitido para los perfiles solicitados.
+ const auth=document.getElementById('authTile');
+ if(auth) auth.style.display=isAdmin?'flex':'none';
+ const af=document.getElementById('adminPassFilters');
+ if(af) af.classList.toggle('hide',!isAdmin);
+} 
 async function logout(){try{await api('logout')}catch(e){}sessionStorage.clear();location.reload()}
 function clearPassForms(){
  const fields=['naRecaudacion','naMarca','naAutobus','naClave','naNombre','naObs','acFecha','acAutobus','acClave','acNombre','acMarca','acMotivo'];
@@ -777,6 +795,19 @@ function clearPassForms(){
  ['naDriverMsg','naMsg','acDriverMsg','acMsg'].forEach(id=>{const e=document.getElementById(id);if(e){e.textContent='';e.classList.add('hide')}});
 }
 function show(id){
+ const role=String(profile?.tipo||'').trim().toUpperCase();
+ const isAdmin=role==='ADMINISTRADOR';
+ const isUser=role==='USUARIO';
+ const allowed={
+  home:true,
+  noAdeudo:isUser||isAdmin,
+  aclaracion:isUser||isAdmin,
+  consulta:true,
+  conductores:isAdmin,
+  estadisticas:isAdmin,
+  usuariosAdmin:isAdmin
+ };
+ if(!allowed[id]){msg('loginMsg','No tienes permiso para acceder a esta opción.',true);return;}
  if(id==='home' || id==='noAdeudo' || id==='aclaracion') clearPassForms();
  ['home','noAdeudo','aclaracion','consulta','conductores','estadisticas','usuariosAdmin'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id));
 }
