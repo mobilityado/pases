@@ -24,8 +24,10 @@ const CFG = {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  // Enlaces de autorización enviados por correo.
-  if (p.action === 'decision') return decisionPage_(p);
+  // IMPORTANTE: el GET del enlace de correo NUNCA debe ejecutar la decisión.
+  // Algunos sistemas de correo/antivirus abren o inspeccionan automáticamente los enlaces.
+  // Por eso el GET solo muestra una pantalla de confirmación y la decisión real se procesa por POST.
+  if (p.action === 'decision') return decisionConfirmPage_(p);
 
   // API por GET (principalmente pruebas/health).
   if (p.action === 'health') return json_({ok:true, app:CFG.APP_NAME, time:new Date()});
@@ -37,11 +39,20 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    const body = JSON.parse((e.postData && e.postData.contents) || '{}');
+    let body = {};
+    const raw = (e && e.postData && e.postData.contents) || '';
+    if (raw) {
+      try { body = JSON.parse(raw); } catch (_) { body = (e && e.parameter) || {}; }
+    } else {
+      body = (e && e.parameter) || {};
+    }
     const action = String(body.action || '');
     let result;
 
     switch (action) {
+      case 'decision':
+        result = decisionPost_(body);
+        return HtmlService.createHtmlOutput('<div style="font-family:Arial;text-align:center;padding:50px"><h2>'+esc_(result.folio)+'</h2><h1>'+esc_(result.estatus)+'</h1><p>La decisión quedó registrada correctamente.</p></div>').setTitle('Pases Mobility ADO');
       case 'login': result = login_(body); break;
       case 'loginUsers': result = loginUsers_(); break;
       case 'logout': result = logout_(body); break;
@@ -56,7 +67,6 @@ function doPost(e) {
       case 'saveAclaracion': result = saveAclaracion_(body); break;
       case 'listPasses': result = listPasses_(body); break;
       case 'getPass': result = getPass_(body); break;
-      case 'decision': result = decisionApi_(body); break;
       default: throw new Error('Acción no válida.');
     }
     return json_({ok:true, data:result});
@@ -540,22 +550,47 @@ function saveAclaracion_(b) {
   return {folio, estatus:'PENDIENTE', enviadoA:destino};
 }
 
-function decisionPage_(p) {
+function decisionConfirmPage_(p) {
   try {
     const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
     const rr=objects_(sh).find(x=>val_(x,'TOKEN_AUTORIZACION')===String(p.token||''));
     if (!rr) throw new Error('Enlace de autorización inválido.');
     const info=autorizadorPorCorreo_(p.email, val_(rr,'DESTINO_AUTORIZACION'));
-    const actor=info ? info.nombre : (val_(rr,'DESTINO_AUTORIZACION') || val_(rr,'CORREO_AUTORIZADOR') || 'AUTORIZADOR');
-    const actorEmail=info ? info.correo : '';
-    const r=processDecision_(p.token,p.decision,p.comentario||'',actor,actorEmail);
-    return HtmlService.createHtmlOutput('<div style="font-family:Arial;text-align:center;padding:50px">'+
-      '<h2>'+esc_(r.folio)+'</h2><h1>'+esc_(r.estatus)+'</h1>'+
-      '<p>La decisión quedó registrada correctamente.</p></div>').setTitle('Pases Mobility ADO');
+    if (!info) throw new Error('No se pudo identificar al autorizador institucional.');
+    const folio=val_(rr,'FOLIO');
+    const decision=String(p.decision||'').toUpperCase();
+    if (!['AUTORIZADO','RECHAZADO'].includes(decision)) throw new Error('Decisión no válida.');
+    const titulo=decision==='AUTORIZADO'?'Confirmar autorización':'Confirmar rechazo';
+    const color=decision==='AUTORIZADO'?'#18864b':'#b42318';
+    const accion=ScriptApp.getService().getUrl();
+    const html='<div style="font-family:Arial;max-width:650px;margin:40px auto;padding:30px;border:1px solid #ddd;border-radius:12px">'+
+      '<h2>'+esc_(titulo)+'</h2>'+
+      '<p><b>Folio:</b> '+esc_(folio)+'</p>'+
+      '<p><b>Autorizador:</b> '+esc_(info.nombre)+'</p>'+
+      '<p><b>Correo:</b> '+esc_(info.correo)+'</p>'+
+      '<p>Esta pantalla es de confirmación. La decisión no se registra hasta que pulses el botón.</p>'+
+      '<form method="post" action="'+esc_(accion)+'" style="margin-top:25px">'+
+      '<input type="hidden" name="action" value="decision">'+
+      '<input type="hidden" name="token" value="'+esc_(p.token)+'">'+
+      '<input type="hidden" name="decision" value="'+esc_(decision)+'">'+
+      '<input type="hidden" name="email" value="'+esc_(info.correo)+'">'+
+      '<button type="submit" style="background:'+color+';color:#fff;border:0;padding:14px 22px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer">'+esc_(decision==='AUTORIZADO'?'CONFIRMAR AUTORIZACIÓN':'CONFIRMAR RECHAZO')+'</button>'+
+      '</form></div>';
+    return HtmlService.createHtmlOutput(html).setTitle('Pases Mobility ADO');
   } catch(err) {
-    return HtmlService.createHtmlOutput('<div style="font-family:Arial;padding:50px"><h2>No fue posible procesar</h2><p>'+
-      esc_(err.message)+'</p></div>');
+    return HtmlService.createHtmlOutput('<div style="font-family:Arial;padding:50px"><h2>No fue posible abrir la autorización</h2><p>'+esc_(err.message)+'</p></div>');
   }
+}
+
+function decisionPost_(p) {
+  const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
+  const rr=objects_(sh).find(x=>val_(x,'TOKEN_AUTORIZACION')===String(p.token||''));
+  if (!rr) throw new Error('Enlace de autorización inválido.');
+  const info=autorizadorPorCorreo_(p.email, val_(rr,'DESTINO_AUTORIZACION'));
+  if (!info) throw new Error('No se pudo identificar al autorizador institucional.');
+  const actor=info.nombre;
+  const actorEmail=info.correo;
+  return processDecision_(p.token,p.decision,p.comentario||'',actor,actorEmail);
 }
 
 function decisionApi_(b) {
