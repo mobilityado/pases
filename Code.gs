@@ -1,6 +1,6 @@
 /**
  * PASES Mobility ADO - Backend Google Apps Script
- * v1.7 - Actualizado (Corrección de listado de usuarios con nombres duplicados)
+ * v1.8 - Identificación del autorizador por correo institucional
  *
  * IMPORTANTE:
  * 1) Este proyecto usa 3 archivos de Google Sheets por ID.
@@ -151,6 +151,33 @@ function requireEmailsByProfiles_(profiles,label) {
   const emails=emailsByProfiles_(profiles);
   if(!emails.length) throw new Error('No hay correos configurados en CORREO 1 / CORREO 2 para '+label+'.');
   return emails;
+}
+
+// Devuelve los datos del autorizador a partir del correo institucional
+// al que se envió la autorización. El enlace de correo lleva este correo
+// como parámetro para que podamos identificar quién tomó la decisión.
+function autorizadorPorCorreo_(correo, destino) {
+  const email=String(correo||'').trim().toLowerCase();
+  if(!email) return null;
+  const rows=objects_(sheet_(CFG.SS_USUARIOS,CFG.SH_USUARIOS));
+  const wanted=norm_(destino||'');
+  for (const r of rows) {
+    if (val_(r,'ACTIVO').toUpperCase()==='NO') continue;
+    if (wanted && norm_(val_(r,'TIPO_CUENTA','TIPO DE CUENTA'))!==wanted) continue;
+    const correos=[val_(r,'CORREO_1','CORREO 1'),val_(r,'CORREO_2','CORREO 2')]
+      .flatMap(x=>String(x||'').split(/[;,]/))
+      .map(x=>x.trim().toLowerCase())
+      .filter(Boolean);
+    if (correos.includes(email)) {
+      return {
+        correo: email,
+        nombre: val_(r,'NOMBRE') || val_(r,'USUARIO') || email,
+        usuario: val_(r,'USUARIO') || '',
+        tipo: val_(r,'TIPO_CUENTA','TIPO DE CUENTA') || destino || ''
+      };
+    }
+  }
+  return null;
 }
 
 function userRow_(usuario) {
@@ -451,13 +478,13 @@ function saveAclaracion_(b) {
     FECHA_EVENTO:d.fechaEvento, MOTIVO_CONCEPTO:d.motivoConcepto, AUTOBUS:d.autobus,
     CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor, MARCA:d.marca||'',
     OBSERVACIONES:'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre,
-    DESTINO_AUTORIZACION:destino, CORREO_AUTORIZADOR:correoAut, ESTATUS:'PENDIENTE',
+    DESTINO_AUTORIZACION:destino, CORREO_AUTORIZADOR:correoAut, CORREO_AUTORIZADOR_REAL:'', ESTATUS:'PENDIENTE',
     FECHA_ENVIO_AUTORIZACION:now, AUTORIZADO_POR:'', FECHA_AUTORIZACION:'',
     COMENTARIO_AUTORIZADOR:'', URL_DOCUMENTO:'', FECHA_ENVIO_FINAL:'',
     TOKEN_AUTORIZACION:tokenAut
   };
   const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
-  ensureHeaders_(sh,['CLAVE_CONDUCTOR','NOMBRE_CONDUCTOR','MARCA']);
+  ensureHeaders_(sh,['CLAVE_CONDUCTOR','NOMBRE_CONDUCTOR','MARCA','CORREO_AUTORIZADOR_REAL']);
   appendObject_(sh,obj);
 
   if (destino==='ADMINISTRADOR') {
@@ -490,17 +517,26 @@ function saveAclaracion_(b) {
   }
 
   const url=ScriptApp.getService().getUrl();
-  const yes=url+'?action=decision&token='+encodeURIComponent(tokenAut)+'&decision=AUTORIZADO';
-  const no=url+'?action=decision&token='+encodeURIComponent(tokenAut)+'&decision=RECHAZADO';
-  const html='<div style="font-family:Arial;max-width:650px">'+
-    '<h2>Pase de Aclaración pendiente</h2><p><b>Folio:</b> '+esc_(folio)+'</p>'+
-    '<p><b>Área:</b> '+esc_(s.area)+' &nbsp; <b>Autobús:</b> '+esc_(d.autobus)+'</p>'+
-    '<p><b>Conductor:</b> '+esc_(d.claveConductor+' - '+d.nombreConductor)+'</p>'+'<p><b>Marca:</b> '+esc_(d.marca||'')+'</p>'+
-    '<p><b>Motivo:</b> '+esc_(d.motivoConcepto)+'</p>'+
-    '<p><a href="'+yes+'" style="background:#18864b;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">AUTORIZAR</a> '+
-    '<a href="'+no+'" style="background:#b42318;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">RECHAZAR</a></p></div>';
-  sendMail_(correoAut,'Autorización Pase de Aclaración '+folio,
-    'Pase '+folio+' pendiente de autorización.',null,html);
+  const destinatarios=correoAut.split(',').map(x=>x.trim()).filter(Boolean);
+  // Se envía un enlace personalizado a cada correo institucional.
+  // Así el clic queda asociado al correo al que llegó la autorización.
+  destinatarios.forEach(correo=>{
+    const info=autorizadorPorCorreo_(correo,destino);
+    if(!info) return;
+    const emailParam=encodeURIComponent(info.correo);
+    const yes=url+'?action=decision&token='+encodeURIComponent(tokenAut)+'&decision=AUTORIZADO&email='+emailParam;
+    const no=url+'?action=decision&token='+encodeURIComponent(tokenAut)+'&decision=RECHAZADO&email='+emailParam;
+    const html='<div style="font-family:Arial;max-width:650px">'+
+      '<h2>Pase de Aclaración pendiente</h2><p><b>Folio:</b> '+esc_(folio)+'</p>'+
+      '<p><b>Área:</b> '+esc_(s.area)+' &nbsp; <b>Autobús:</b> '+esc_(d.autobus)+'</p>'+
+      '<p><b>Conductor:</b> '+esc_(d.claveConductor+' - '+d.nombreConductor)+'</p>'+'<p><b>Marca:</b> '+esc_(d.marca||'')+'</p>'+
+      '<p><b>Motivo:</b> '+esc_(d.motivoConcepto)+'</p>'+
+      '<p><b>Autorización dirigida a:</b> '+esc_(info.nombre)+' ('+esc_(info.correo)+')</p>'+
+      '<p><a href="'+yes+'" style="background:#18864b;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">AUTORIZAR</a> '+
+      '<a href="'+no+'" style="background:#b42318;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">RECHAZAR</a></p></div>';
+    sendMail_(correo,'Autorización Pase de Aclaración '+folio,
+      'Pase '+folio+' pendiente de autorización para '+info.nombre+' ('+info.correo+').',null,html);
+  });
   return {folio, estatus:'PENDIENTE', enviadoA:destino};
 }
 
@@ -508,8 +544,11 @@ function decisionPage_(p) {
   try {
     const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
     const rr=objects_(sh).find(x=>val_(x,'TOKEN_AUTORIZACION')===String(p.token||''));
-    const actor=rr ? (val_(rr,'DESTINO_AUTORIZACION') || val_(rr,'CORREO_AUTORIZADOR') || 'AUTORIZADOR') : 'AUTORIZADOR';
-    const r=processDecision_(p.token,p.decision,p.comentario||'',actor);
+    if (!rr) throw new Error('Enlace de autorización inválido.');
+    const info=autorizadorPorCorreo_(p.email, val_(rr,'DESTINO_AUTORIZACION'));
+    const actor=info ? info.nombre : (val_(rr,'DESTINO_AUTORIZACION') || val_(rr,'CORREO_AUTORIZADOR') || 'AUTORIZADOR');
+    const actorEmail=info ? info.correo : '';
+    const r=processDecision_(p.token,p.decision,p.comentario||'',actor,actorEmail);
     return HtmlService.createHtmlOutput('<div style="font-family:Arial;text-align:center;padding:50px">'+
       '<h2>'+esc_(r.folio)+'</h2><h1>'+esc_(r.estatus)+'</h1>'+
       '<p>La decisión quedó registrada correctamente.</p></div>').setTitle('Pases Mobility ADO');
@@ -524,10 +563,13 @@ function decisionApi_(b) {
   const tipo=String(s.tipo||'').toUpperCase();
   if (!['ADMINISTRADOR','PRECEPTOR','PRECEPTOR CRT','GERENTE'].includes(tipo))
     throw new Error('Tu perfil no puede autorizar pases.');
-  return processDecision_(b.tokenAut,b.decision,b.comentario||'',s.usuario);
+  const row=userRow_(s.usuario)||{};
+  const actor=val_(row,'NOMBRE') || s.nombre || s.usuario;
+  const actorEmail=String(val_(row,'CORREO_1','CORREO 1') || val_(row,'CORREO_2','CORREO 2') || s.correo || '').trim();
+  return processDecision_(b.tokenAut,b.decision,b.comentario||'',actor,actorEmail);
 }
 
-function processDecision_(tokenAut,decision,comentario,actor) {
+function processDecision_(tokenAut,decision,comentario,actor,actorEmail) {
   const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
   const rows=objects_(sh);
   const r=rows.find(x=>val_(x,'TOKEN_AUTORIZACION')===String(tokenAut||''));
@@ -541,7 +583,8 @@ function processDecision_(tokenAut,decision,comentario,actor) {
 
   if (decision==='RECHAZADO') {
     const fechaRechazo=new Date();
-    updateByFolio_(sh,folio,{ESTATUS:'RECHAZADO',AUTORIZADO_POR:actor,FECHA_AUTORIZACION:fechaRechazo,
+    updateByFolio_(sh,folio,{ESTATUS:'RECHAZADO',AUTORIZADO_POR:actor,
+      CORREO_AUTORIZADOR_REAL:actorEmail,FECHA_AUTORIZACION:fechaRechazo,
       COMENTARIO_AUTORIZADOR:comentario});
 
     const creador=val_(r,'CREADO_POR');
@@ -563,6 +606,7 @@ function processDecision_(tokenAut,decision,comentario,actor) {
           '<p><b>Folio:</b> '+esc_(folio)+'</p>'+
           '<p><b>Creado por:</b> '+esc_(nombreCreador)+'</p>'+
           '<p><b>Rechazado por:</b> '+esc_(actor)+'</p>'+
+          (actorEmail ? '<p><b>Correo:</b> '+esc_(actorEmail)+'</p>' : '')+
           (comentario ? '<p><b>Comentario:</b> '+esc_(comentario)+'</p>' : '')+
           '<p>El pase no fue autorizado. Puedes consultar su estatus en PASE INTELIGENTE.</p>'+
         '</div>'
@@ -574,7 +618,8 @@ function processDecision_(tokenAut,decision,comentario,actor) {
 
   const autorizador=String(actor||'').trim() || String(val_(r,'DESTINO_AUTORIZACION')||'AUTORIZADOR').trim();
   const fechaAutorizacion=new Date();
-  updateByFolio_(sh,folio,{ESTATUS:'AUTORIZADO',AUTORIZADO_POR:autorizador,FECHA_AUTORIZACION:fechaAutorizacion,
+  updateByFolio_(sh,folio,{ESTATUS:'AUTORIZADO',AUTORIZADO_POR:autorizador,
+    CORREO_AUTORIZADOR_REAL:actorEmail,FECHA_AUTORIZACION:fechaAutorizacion,
     COMENTARIO_AUTORIZADOR:comentario});
   SpreadsheetApp.flush();
 
@@ -582,6 +627,7 @@ function processDecision_(tokenAut,decision,comentario,actor) {
   if (!fresh) throw new Error('No se pudo recuperar el pase autorizado '+folio+'.');
   fresh.ESTATUS='AUTORIZADO';
   fresh.AUTORIZADO_POR=autorizador;
+  fresh.CORREO_AUTORIZADOR_REAL=actorEmail;
   fresh.FECHA_AUTORIZACION=fechaAutorizacion;
   const pdf=createPdf_('ACLARACION',fresh);
 
@@ -714,8 +760,8 @@ function createPdf_(tipo,r) {
     y+=h+7;
   });
 
-  const footerY=350;
-  const footer=slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE,24,footerY,672,34);
+  const footerY=336;
+  const footer=slide.insertShape(SlidesApp.ShapeType.ROUND_RECTANGLE,24,footerY,672,48);
   footer.getFill().setSolidFill(light);
   footer.getBorder().setWeight(1);
   footer.getBorder().getLineFill().setSolidFill('#B8A7C5');
@@ -723,8 +769,10 @@ function createPdf_(tipo,r) {
   let footText;
   if(tipo==='ACLARACION'){
     const autoriza=val_(r,'AUTORIZADO_POR') || 'PENDIENTE DE AUTORIZACIÓN';
+    const correoAutoriza=val_(r,'CORREO_AUTORIZADOR_REAL');
     footText='GENERADO POR: '+(val_(r,'NOMBRE_CREADOR')||val_(r,'CREADO_POR'))+
-             '     •     AUTORIZADO POR: '+autoriza;
+             '     •     AUTORIZADO POR: '+autoriza+
+             (correoAutoriza ? '\nCORREO: '+correoAutoriza : '');
   } else {
     footText='GENERADO POR: '+(val_(r,'NOMBRE_CREADOR')||val_(r,'CREADO_POR'));
   }
