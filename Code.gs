@@ -532,8 +532,10 @@ function saveAclaracion_(b) {
     sendMail_(destinoFinal,'Pase de Aclaración AUTORIZADO '+folio,
       'El pase '+folio+' fue autorizado automáticamente por estar dirigido a ADMINISTRADOR. Se adjunta el documento final.',pdf);
 
-    updateByFolio_(sh,folio,{ESTATUS:'ENVIADO',FECHA_ENVIO_FINAL:new Date()});
-    return {folio, estatus:'ENVIADO', enviadoA:'USUARIO y ADMINISTRADOR'};
+    // El pase de Aclaración conserva su estatus de AUTORIZADO.
+    // ENVIADO se reserva para los pases de No Adeudo.
+    updateByFolio_(sh,folio,{FECHA_ENVIO_FINAL:new Date()});
+    return {folio, estatus:'AUTORIZADO', enviadoA:'USUARIO y ADMINISTRADOR'};
   }
 
   const url=ScriptApp.getService().getUrl();
@@ -742,8 +744,10 @@ function processDecision_(tokenAut,decision,comentario,actor,actorEmail) {
   const destinoFinal=correosFinales.join(',');
   sendMail_(destinoFinal,'Pase de Aclaración AUTORIZADO '+folio,
     'El pase '+folio+' fue autorizado. Se adjunta el documento final.',pdf);
-  updateByFolio_(sh,folio,{ESTATUS:'ENVIADO',FECHA_ENVIO_FINAL:new Date()});
-  return {folio,estatus:'ENVIADO'};
+  // El pase de Aclaración queda como AUTORIZADO aun después de enviar el PDF.
+  // El estatus ENVIADO se utiliza únicamente para Pases de No Adeudo.
+  updateByFolio_(sh,folio,{FECHA_ENVIO_FINAL:new Date()});
+  return {folio,estatus:'AUTORIZADO'};
 }
 
 /* ========================= CONSULTA ========================= */
