@@ -300,7 +300,20 @@ function adminStats_(b) {
   const gran=String(b.granularity||'MONTH').toUpperCase();
   if(!['WEEK','MONTH','YEAR'].includes(gran)) throw new Error('Periodo no válido.');
 
-  let all=[];
+  const desde=String(b.desde||'').trim();
+   const hasta=String(b.hasta||'').trim();
+   let dDesde=null,dHasta=null;
+   if(desde){
+     dDesde=new Date(desde+'T00:00:00');
+     if(isNaN(dDesde.getTime())) throw new Error('Fecha Desde no válida.');
+   }
+   if(hasta){
+     dHasta=new Date(hasta+'T23:59:59.999');
+     if(isNaN(dHasta.getTime())) throw new Error('Fecha Hasta no válida.');
+   }
+   if(dDesde && dHasta && dDesde>dHasta) throw new Error('La fecha Desde no puede ser mayor que la fecha Hasta.');
+
+   let all=[];
   objects_(sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION)).forEach(r=>all.push({
     tipo:'ACLARACION', fecha:val_(r,'FECHA_CREACION'), usuario:val_(r,'NOMBRE_CREADOR','CREADO_POR')||'SIN USUARIO'
   }));
@@ -308,10 +321,11 @@ function adminStats_(b) {
     tipo:'NO_ADEUDO', fecha:val_(r,'FECHA_CREACION'), usuario:val_(r,'NOMBRE_CREADOR','CREADO_POR')||'SIN USUARIO'
   }));
 
-  const now=new Date();
   const items={};
   all.forEach(x=>{
     const d=parseDate_(x.fecha); if(!d || isNaN(d.getTime())) return;
+    if(dDesde && d<dDesde) return;
+    if(dHasta && d>dHasta) return;
     const p=periodKey_(d,gran);
     const key=p.key+'|'+x.usuario;
     if(!items[key]) items[key]={period:p.key,label:p.label,sort:p.sort,usuario:x.usuario,total:0,noAdeudo:0,aclaracion:0};

@@ -604,9 +604,9 @@ body{overflow-x:hidden!important;background:none!important}
       </div>
       <div class="sectionTitle"><b>Accesos rápidos</b><span>Selecciona una operación</span></div>
       <div class="menu">
-        <div class="tile purple role-user-admin" onclick="show('noAdeudo')"><span class="ico">🚌</span><b>Pases de No Adeudo</b><span>Genera y envía pases digitales</span></div>
-        <div class="tile crimson role-user-admin" onclick="show('aclaracion')"><span class="ico">📝</span><b>Aclaraciones</b><span>Solicita y da seguimiento</span></div>
-        <div class="tile blue" onclick="show('consulta');loadPasses()"><span class="ico">🔎</span><b>Consulta de Pases</b><span>Historial y estatus</span></div>
+        <div class="tile purple role-user-admin" id="noAdeudoTile" onclick="show('noAdeudo')"><span class="ico">🚌</span><b>Pases de No Adeudo</b><span>Genera y envía pases digitales</span></div>
+        <div class="tile crimson role-user-admin" id="aclaracionTile" onclick="show('aclaracion')"><span class="ico">📝</span><b>Aclaraciones</b><span>Solicita y da seguimiento</span></div>
+        <div class="tile blue" id="consultaTile" onclick="show('consulta');loadPasses()"><span class="ico">🔎</span><b>Consulta de Pases</b><span>Historial y estatus</span></div>
         <div class="tile green authOnly" id="authTile" onclick="show('consulta');document.getElementById('fEstado').value='PENDIENTE';loadPasses()"><span class="ico">✓</span><b>Pendientes</b><span>Autorizaciones por atender</span></div>
         <div class="tile purple adminOnly" id="driversTile" onclick="show('conductores');loadDrivers()"><span class="ico">👤</span><b>Alta de Conductores</b><span>Catálogo maestro de conductores</span></div>
         <div class="tile crimson adminOnly" id="statsTile" onclick="show('estadisticas');loadStats()"><span class="ico">📊</span><b>Estadísticas</b><span>Comparativa semanal, mensual y anual</span></div>
@@ -728,7 +728,12 @@ body{overflow-x:hidden!important;background:none!important}
 
     <section id="estadisticas" class="hide card">
       <div class="row"><div><div class="eyebrow" style="color:#6a2ca0">TABLERO EJECUTIVO</div><h2>Estadística de Pases Digitales</h2></div><div class="spacer"></div><button class="btn ghost" onclick="show('home')">Volver</button></div>
-      <div class="row" style="margin-top:12px"><div><label>Comparar por</label><select id="stGran" onchange="loadStats()"><option value="WEEK">Semanal</option><option value="MONTH" selected>Mensual</option><option value="YEAR">Anual</option></select></div></div>
+      <div class="row" style="margin-top:12px">
+         <div><label>Comparar por</label><select id="stGran" onchange="loadStats()"><option value="WEEK">Semanal</option><option value="MONTH" selected>Mensual</option><option value="YEAR">Anual</option></select></div>
+         <div><label>Desde</label><input id="stDesde" type="date" onchange="loadStats()"></div>
+         <div><label>Hasta</label><input id="stHasta" type="date" onchange="loadStats()"></div>
+         <div style="align-self:end"><button class="btn ghost" onclick="clearStatsDates()">Todo el periodo</button></div>
+       </div>
       <div class="kpis"><div class="kpi"><span>Total de pases</span><strong id="kTotal">0</strong></div><div class="kpi"><span>No Adeudo</span><strong id="kNA">0</strong></div><div class="kpi"><span>Aclaraciones</span><strong id="kAC">0</strong></div></div>
       <div class="subcard"><h3>Comparativa por periodo</h3><div id="statsChart" class="chart"></div></div><br>
       <div class="subcard"><h3>Productividad por usuario</h3><div style="overflow:auto"><table><thead><tr><th>Usuario</th><th>Total</th><th>No Adeudo</th><th>Aclaraciones</th></tr></thead><tbody id="statsUsers"></tbody></table></div></div>
@@ -782,69 +787,51 @@ function enter(){
 
   // Mostrar identidad del usuario
   who.textContent = `${profile.nombre} · ${profile.tipo} · ${profile.area}`;
+  // =====================================================
+  // MENÚ POR TIPO DE CUENTA
+  // Ocultamos TODAS las tarjetas primero y después
+  // mostramos únicamente las que corresponden al perfil.
+  // =====================================================
 
-  // =====================================================
-  // OCULTAR TODO EL MENÚ PRIMERO
-  // =====================================================
+  const menuTiles = [
+    'noAdeudoTile',
+    'aclaracionTile',
+    'consultaTile',
+    'authTile',
+    'driversTile',
+    'statsTile',
+    'usersTile'
+  ];
 
-  const menuItems = [
-    'noAdeudo',
-    'aclaracion',
-    'consulta',
-    'authTile',
-    'conductores',
-    'estadisticas',
-    'usuariosAdmin'
-  ];
+  menuTiles.forEach(id => {
+    const e = document.getElementById(id);
+    if (e) e.style.display = 'none';
+  });
 
-  menuItems.forEach(id => {
-    const e = document.getElementById(id);
-    if (e) {
-      e.style.display = 'none';
-    }
-  });
+  // USUARIO: No Adeudo + Aclaraciones + Consulta
+  if (isUser) {
+    ['noAdeudoTile','aclaracionTile','consultaTile'].forEach(id => {
+      const e = document.getElementById(id);
+      if (e) e.style.display = 'grid';
+    });
+  }
 
-  // =====================================================
-  // USUARIO
-  // No Adeudo + Aclaraciones + Consulta
-  // =====================================================
+  // PRECEPTOR / TRAFICO / GERENTE: Consulta + Pendientes
+  if (isAuthorizer) {
+    ['consultaTile','authTile'].forEach(id => {
+      const e = document.getElementById(id);
+      if (e) e.style.display = 'grid';
+    });
+  }
 
-  if (isUser) {
-    const noAdeudo = document.getElementById('noAdeudo');
-    const aclaracion = document.getElementById('aclaracion');
-    const consulta = document.getElementById('consulta');
+  // ADMINISTRADOR: todas las opciones
+  if (isAdmin) {
+    menuTiles.forEach(id => {
+      const e = document.getElementById(id);
+      if (e) e.style.display = 'grid';
+    });
+  }
 
-    if (noAdeudo) noAdeudo.style.display = 'block';
-    if (aclaracion) aclaracion.style.display = 'block';
-    if (consulta) consulta.style.display = 'block';
-  }
-
-  // =====================================================
-  // PRECEPTOR / TRAFICO / GERENTE
-  // Solo Consulta
-  // =====================================================
-
-  if (isAuthorizer) {
-    const consulta = document.getElementById('consulta');
-
-    if (consulta) {
-      consulta.style.display = 'block';
-    }
-  }
-
-  // =====================================================
-  // ADMINISTRADOR
-  // Todo
-  // =====================================================
-
-  if (isAdmin) {
-    menuItems.forEach(id => {
-      const e = document.getElementById(id);
-      if (e) {
-        e.style.display = 'block';
-      }
-    });
-  }
 
   // =====================================================
   // FILTROS ADMINISTRATIVOS
@@ -1016,17 +1003,24 @@ async function loadDrivers(){
  }catch(e){driverRows.innerHTML=`<tr><td colspan="3">${esc(e.message)}</td></tr>`}
 }
 async function loadStats(){
- try{
-  statsChart.innerHTML='<div style="padding:30px">Calculando...</div>';
-  const d=await api('adminStats',{granularity:stGran.value});
-  kTotal.textContent=d.totals.total;kNA.textContent=d.totals.noAdeudo;kAC.textContent=d.totals.aclaracion;
-  const max=Math.max(1,...d.summary.map(x=>x.total));
-  statsChart.innerHTML=d.summary.length?d.summary.map(x=>{
-    const h=Math.max(3,Math.round(x.total/max*190));
-    return `<div class="barCol"><div class="bar" style="height:${h}px"><em>${x.total}</em></div><small>${esc(x.label)}</small></div>`;
-  }).join(''):'<div style="padding:30px">Sin datos para mostrar.</div>';
-  statsUsers.innerHTML=d.users.length?d.users.map(x=>`<tr><td><b>${esc(x.usuario)}</b></td><td>${x.total}</td><td>${x.noAdeudo}</td><td>${x.aclaracion}</td></tr>`).join(''):'<tr><td colspan="4">Sin datos.</td></tr>';
- }catch(e){statsChart.innerHTML=`<div style="padding:30px">${esc(e.message)}</div>`}
+  try{
+   statsChart.innerHTML='<div style="padding:30px">Calculando...</div>';
+   const d=await api('adminStats',{
+     granularity:stGran.value,
+     desde:stDesde.value,
+     hasta:stHasta.value
+   });
+   kTotal.textContent=d.totals.total;kNA.textContent=d.totals.noAdeudo;kAC.textContent=d.totals.aclaracion;
+   const max=Math.max(1,...d.summary.map(x=>x.total));
+   statsChart.innerHTML=d.summary.length?d.summary.map(x=>{
+     const h=Math.max(3,Math.round(x.total/max*190));
+     return `<div class="barCol"><div class="bar" style="height:${h}px"><em>${x.total}</em></div><small>${esc(x.label)}</small></div>`;
+   }).join(''):'<div style="padding:30px">Sin datos para mostrar.</div>';
+   statsUsers.innerHTML=d.users.length?d.users.map(x=>`<tr><td><b>${esc(x.usuario)}</b></td><td>${x.total}</td><td>${x.noAdeudo}</td><td>${x.aclaracion}</td></tr>`).join(''):'<tr><td colspan="4">Sin datos.</td></tr>';
+  }catch(e){statsChart.innerHTML=`<div style="padding:30px">${esc(e.message)}</div>`}
+}
+function clearStatsDates(){
+  stDesde.value='';stHasta.value='';loadStats();
 }
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
