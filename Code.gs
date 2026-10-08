@@ -52,7 +52,17 @@ function doPost(e) {
     switch (action) {
       case 'decision':
         result = decisionPost_(body);
-        return HtmlService.createHtmlOutput('<div style="font-family:Arial;text-align:center;padding:50px"><h2>'+esc_(result.folio)+'</h2><h1>'+esc_(result.estatus)+'</h1><p>La decisión quedó registrada correctamente.</p></div>').setTitle('Pases Mobility ADO').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+        let msg='La decisión quedó registrada correctamente.';
+        if (result && result.yaProcesado) {
+          const fecha=result.fecha ? ' el '+esc_(formatDateTime_(result.fecha)) : '';
+          msg='<p><b>Este pase ya había sido procesado anteriormente.</b></p>' +
+              '<p><b>Resultado:</b> '+esc_(result.estatus)+'</p>' +
+              '<p><b>Procesado por:</b> '+esc_(result.autorizadoPor || 'AUTORIZADOR')+'</p>' +
+              (result.correo ? '<p><b>Correo:</b> '+esc_(result.correo)+'</p>' : '') +
+              '<p><b>Fecha:</b>'+fecha+'</p>' +
+              '<p>No es necesario realizar ninguna otra acción.</p>';
+        }
+        return HtmlService.createHtmlOutput('<div style="font-family:Arial;max-width:650px;margin:40px auto;text-align:center;padding:50px"><h2>'+esc_(result.folio)+'</h2><h1>'+esc_(result.estatus)+'</h1>'+msg+'</div>').setTitle('Pases Mobility ADO').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
       case 'login': result = login_(body); break;
       case 'loginUsers': result = loginUsers_(); break;
       case 'logout': result = logout_(body); break;
@@ -641,21 +651,52 @@ function decisionApi_(b) {
 
 function processDecision_(tokenAut,decision,comentario,actor,actorEmail) {
   const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
-  const rows=objects_(sh);
-  const r=rows.find(x=>val_(x,'TOKEN_AUTORIZACION')===String(tokenAut||''));
-  if (!r) throw new Error('Enlace de autorización inválido.');
-  const actual=val_(r,'ESTATUS').toUpperCase();
-  if (actual!=='PENDIENTE') return {folio:val_(r,'FOLIO'),estatus:actual};
+  // El enlace nuevo usa un token distinto por cada autorizador y se guarda
+  // dentro de TOKENS_AUTORIZACION como {correo: token}. Por eso NO debemos
+  // buscarlo únicamente en TOKEN_AUTORIZACION (que es el token general/antiguo).
+  // Primero resolvemos cualquier token válido mediante la fuente de verdad.
+  const found=findAuthorizationByToken_(sh,String(tokenAut||''));
+  if (!found) throw new Error('Enlace de autorización inválido.');
 
+  const folio=val_(found.row,'FOLIO');
   decision=String(decision||'').toUpperCase();
   if (!['AUTORIZADO','RECHAZADO'].includes(decision)) throw new Error('Decisión no válida.');
-  const folio=val_(r,'FOLIO');
+
+  // BLOQUEO DE CONCURRENCIA: si dos autorizadores confirman casi al mismo
+  // tiempo, solo el primero puede cambiar el pase desde PENDIENTE. El segundo
+  // encontrará el estado ya procesado y recibirá quién lo autorizó/rechazó.
+  const lock=LockService.getScriptLock();
+  lock.waitLock(20000);
+  let fechaDecision;
+  try {
+    const rows=objects_(sh);
+    const rActual=rows.find(x=>val_(x,'FOLIO')===folio);
+    if (!rActual) throw new Error('No se encontró el pase '+folio+'.');
+    const actual=String(val_(rActual,'ESTATUS')||'').toUpperCase();
+    if (actual!=='PENDIENTE') {
+      return {folio:folio,estatus:actual,yaProcesado:true,
+        autorizadoPor:val_(rActual,'AUTORIZADO_POR'),
+        correo:val_(rActual,'CORREO_AUTORIZADOR_REAL'),
+        fecha:val_(rActual,'FECHA_AUTORIZACION')};
+    }
+
+    fechaDecision=new Date();
+    const nuevoEstatus=decision==='RECHAZADO'?'RECHAZADO':'AUTORIZADO';
+    updateByFolio_(sh,folio,{ESTATUS:nuevoEstatus,AUTORIZADO_POR:actor,
+      CORREO_AUTORIZADOR_REAL:actorEmail,FECHA_AUTORIZACION:fechaDecision,
+      COMENTARIO_AUTORIZADOR:comentario});
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+
+  // Recuperamos el registro actualizado fuera del bloqueo para continuar con
+  // correo/PDF sin impedir que otro clic pueda consultar el resultado.
+  const r=objects_(sh).find(x=>val_(x,'FOLIO')===folio);
+  if (!r) throw new Error('No se pudo recuperar el pase '+folio+'.');
 
   if (decision==='RECHAZADO') {
-    const fechaRechazo=new Date();
-    updateByFolio_(sh,folio,{ESTATUS:'RECHAZADO',AUTORIZADO_POR:actor,
-      CORREO_AUTORIZADOR_REAL:actorEmail,FECHA_AUTORIZACION:fechaRechazo,
-      COMENTARIO_AUTORIZADOR:comentario});
+    const fechaRechazo=fechaDecision;
 
     const creador=val_(r,'CREADO_POR');
     const creadorRow=userRow_(creador)||{};
@@ -687,11 +728,7 @@ function processDecision_(tokenAut,decision,comentario,actor,actorEmail) {
   }
 
   const autorizador=String(actor||'').trim() || String(val_(r,'DESTINO_AUTORIZACION')||'AUTORIZADOR').trim();
-  const fechaAutorizacion=new Date();
-  updateByFolio_(sh,folio,{ESTATUS:'AUTORIZADO',AUTORIZADO_POR:autorizador,
-    CORREO_AUTORIZADOR_REAL:actorEmail,FECHA_AUTORIZACION:fechaAutorizacion,
-    COMENTARIO_AUTORIZADOR:comentario});
-  SpreadsheetApp.flush();
+  const fechaAutorizacion=fechaDecision;
 
   const fresh=objects_(sh).find(x=>val_(x,'FOLIO')===folio);
   if (!fresh) throw new Error('No se pudo recuperar el pase autorizado '+folio+'.');
@@ -1014,6 +1051,13 @@ function normPass_(r,tipo) {
     estatus:val_(r,'ESTATUS'), creadoPor:val_(r,'CREADO_POR'),
     nombreCreador:val_(r,'NOMBRE_CREADOR','CREADO_POR')
   };
+}
+
+function formatDateTime_(value) {
+  if (!value) return '';
+  const d=value instanceof Date ? value : new Date(value);
+  if (isNaN(d.getTime())) return String(value);
+  return Utilities.formatDate(d, CFG.TZ, 'dd/MM/yyyy HH:mm');
 }
 
 function val_(o) {
