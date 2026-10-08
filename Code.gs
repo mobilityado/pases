@@ -1,6 +1,6 @@
 /**
  * PASES Mobility ADO - Backend Google Apps Script
- * v1.8 - Identificación del autorizador por correo institucional
+ * v1.9 - Token único por autorizador institucional
  *
  * IMPORTANTE:
  * 1) Este proyecto usa 3 archivos de Google Sheets por ID.
@@ -491,10 +491,10 @@ function saveAclaracion_(b) {
     DESTINO_AUTORIZACION:destino, CORREO_AUTORIZADOR:correoAut, CORREO_AUTORIZADOR_REAL:'', ESTATUS:'PENDIENTE',
     FECHA_ENVIO_AUTORIZACION:now, AUTORIZADO_POR:'', FECHA_AUTORIZACION:'',
     COMENTARIO_AUTORIZADOR:'', URL_DOCUMENTO:'', FECHA_ENVIO_FINAL:'',
-    TOKEN_AUTORIZACION:tokenAut
+    TOKEN_AUTORIZACION:tokenAut, TOKENS_AUTORIZACION:''
   };
   const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
-  ensureHeaders_(sh,['CLAVE_CONDUCTOR','NOMBRE_CONDUCTOR','MARCA','CORREO_AUTORIZADOR_REAL']);
+  ensureHeaders_(sh,['CLAVE_CONDUCTOR','NOMBRE_CONDUCTOR','MARCA','CORREO_AUTORIZADOR_REAL','TOKENS_AUTORIZACION']);
   appendObject_(sh,obj);
 
   if (destino==='ADMINISTRADOR') {
@@ -528,14 +528,17 @@ function saveAclaracion_(b) {
 
   const url=ScriptApp.getService().getUrl();
   const destinatarios=correoAut.split(',').map(x=>x.trim()).filter(Boolean);
-  // Se envía un enlace personalizado a cada correo institucional.
-  // Así el clic queda asociado al correo al que llegó la autorización.
+  // Cada destinatario recibe un TOKEN ÚNICO. Así, cuando uno de los dos
+  // PRECEPTOR CRT autoriza, el sistema sabe exactamente cuál de sus correos
+  // recibió y utilizó el enlace, sin depender de una cuenta Google.
+  const tokensPorCorreo={};
   destinatarios.forEach(correo=>{
     const info=autorizadorPorCorreo_(correo,destino);
     if(!info) return;
-    const emailParam=encodeURIComponent(info.correo);
-    const yes=url+'?action=decision&token='+encodeURIComponent(tokenAut)+'&decision=AUTORIZADO&email='+emailParam;
-    const no=url+'?action=decision&token='+encodeURIComponent(tokenAut)+'&decision=RECHAZADO&email='+emailParam;
+    const tokenDest=Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');
+    tokensPorCorreo[info.correo]=tokenDest;
+    const yes=url+'?action=decision&token='+encodeURIComponent(tokenDest)+'&decision=AUTORIZADO';
+    const no=url+'?action=decision&token='+encodeURIComponent(tokenDest)+'&decision=RECHAZADO';
     const html='<div style="font-family:Arial;max-width:650px">'+
       '<h2>Pase de Aclaración pendiente</h2><p><b>Folio:</b> '+esc_(folio)+'</p>'+
       '<p><b>Área:</b> '+esc_(s.area)+' &nbsp; <b>Autobús:</b> '+esc_(d.autobus)+'</p>'+
@@ -547,16 +550,22 @@ function saveAclaracion_(b) {
     sendMail_(correo,'Autorización Pase de Aclaración '+folio,
       'Pase '+folio+' pendiente de autorización para '+info.nombre+' ('+info.correo+').',null,html);
   });
+  // Guardamos la relación token -> correo en la hoja. Es la fuente de verdad
+  // para identificar al autorizador sin confiar en parámetros editables del URL.
+  updateByFolio_(sh,folio,{TOKENS_AUTORIZACION:JSON.stringify(tokensPorCorreo)});
   return {folio, estatus:'PENDIENTE', enviadoA:destino};
 }
 
 function decisionConfirmPage_(p) {
   try {
     const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
-    const rr=objects_(sh).find(x=>val_(x,'TOKEN_AUTORIZACION')===String(p.token||''));
-    if (!rr) throw new Error('Enlace de autorización inválido.');
-    const info=autorizadorPorCorreo_(p.email, val_(rr,'DESTINO_AUTORIZACION'));
-    if (!info) throw new Error('No se pudo identificar al autorizador institucional.');
+    const token=String(p.token||'');
+    const found=findAuthorizationByToken_(sh,token);
+    if (!found) throw new Error('Enlace de autorización inválido o expirado.');
+    const rr=found.row;
+    const info=autorizadorPorCorreo_(found.email, val_(rr,'DESTINO_AUTORIZACION'));
+    if (!info || String(info.correo).toLowerCase()!==String(found.email).toLowerCase())
+      throw new Error('No se pudo identificar al autorizador institucional.');
     const folio=val_(rr,'FOLIO');
     const decision=String(p.decision||'').toUpperCase();
     if (!['AUTORIZADO','RECHAZADO'].includes(decision)) throw new Error('Decisión no válida.');
@@ -584,13 +593,39 @@ function decisionConfirmPage_(p) {
 
 function decisionPost_(p) {
   const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
-  const rr=objects_(sh).find(x=>val_(x,'TOKEN_AUTORIZACION')===String(p.token||''));
-  if (!rr) throw new Error('Enlace de autorización inválido.');
-  const info=autorizadorPorCorreo_(p.email, val_(rr,'DESTINO_AUTORIZACION'));
-  if (!info) throw new Error('No se pudo identificar al autorizador institucional.');
+  const found=findAuthorizationByToken_(sh,String(p.token||''));
+  if (!found) throw new Error('Enlace de autorización inválido o expirado.');
+  const rr=found.row;
+  const info=autorizadorPorCorreo_(found.email, val_(rr,'DESTINO_AUTORIZACION'));
+  if (!info || String(info.correo).toLowerCase()!==String(found.email).toLowerCase())
+    throw new Error('No se pudo identificar al autorizador institucional.');
   const actor=info.nombre;
   const actorEmail=info.correo;
   return processDecision_(p.token,p.decision,p.comentario||'',actor,actorEmail);
+}
+
+// Busca el token único de un destinatario y devuelve también el correo al que
+// pertenece. Compatible con pases antiguos que solo tengan TOKEN_AUTORIZACION.
+function findAuthorizationByToken_(sh,token) {
+  const t=String(token||'');
+  if (!t) return null;
+  const rows=objects_(sh);
+  for (const row of rows) {
+    const raw=val_(row,'TOKENS_AUTORIZACION');
+    if (raw) {
+      try {
+        const map=JSON.parse(raw);
+        for (const email in map) {
+          if (String(map[email])===t) return {row:row,email:email};
+        }
+      } catch (_) {}
+    }
+    if (String(val_(row,'TOKEN_AUTORIZACION'))===t) {
+      const email=String(val_(row,'CORREO_AUTORIZADOR')||'').split(',')[0].trim();
+      if (email) return {row:row,email:email};
+    }
+  }
+  return null;
 }
 
 function decisionApi_(b) {
