@@ -251,6 +251,8 @@ body{
 .heroGlyph{font-size:82px;line-height:.65;transform:rotate(-12deg);font-weight:300}.heroMobility>span:last-child{font-size:29px;letter-spacing:1.5px;font-weight:300;margin-top:12px}.heroMobility b{color:rgba(244,56,73,.82);font-weight:900}
 .hero h1,.hero h2{color:#fff!important}.hero p{color:rgba(255,255,255,.92)!important}
 .menu{gap:16px!important}.tile{position:relative;overflow:hidden;padding:24px 26px!important;min-height:135px!important;border-radius:18px!important;display:grid!important;grid-template-columns:60px 1fr 28px;grid-template-rows:auto auto;align-items:center;column-gap:16px}
+/* Ocultar tarjetas sin permiso. !important es necesario porque .tile usa display:grid!important. */
+.tile.menu-hidden{display:none!important}
 .tile:after{content:"›";grid-column:3;grid-row:1/3;font-size:38px;color:#81758d;font-weight:300}
 .tile .ico{grid-column:1;grid-row:1/3;width:54px!important;height:54px!important;font-size:25px!important}
 .tile b{grid-column:2;grid-row:1;font-size:18px!important;color:#311248}.tile>span:last-of-type:not(.ico){grid-column:2;grid-row:2;color:#81758d!important}
@@ -805,14 +807,17 @@ function enter(){
 
   menuTiles.forEach(id => {
     const e = document.getElementById(id);
-    if (e) e.style.display = 'none';
+    if (e) {
+      e.classList.add('menu-hidden');
+      e.setAttribute('aria-hidden','true');
+    }
   });
 
   // USUARIO: No Adeudo + Aclaraciones + Consulta
   if (isUser) {
     ['noAdeudoTile','aclaracionTile','consultaTile'].forEach(id => {
       const e = document.getElementById(id);
-      if (e) e.style.display = 'grid';
+      if (e) { e.classList.remove('menu-hidden'); e.removeAttribute('aria-hidden'); }
     });
   }
 
@@ -820,7 +825,7 @@ function enter(){
   if (isAuthorizer) {
     ['consultaTile','authTile'].forEach(id => {
       const e = document.getElementById(id);
-      if (e) e.style.display = 'grid';
+      if (e) { e.classList.remove('menu-hidden'); e.removeAttribute('aria-hidden'); }
     });
   }
 
@@ -828,7 +833,7 @@ function enter(){
   if (isAdmin) {
     menuTiles.forEach(id => {
       const e = document.getElementById(id);
-      if (e) e.style.display = 'grid';
+      if (e) { e.classList.remove('menu-hidden'); e.removeAttribute('aria-hidden'); }
     });
   }
 
