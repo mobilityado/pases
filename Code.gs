@@ -76,6 +76,7 @@ function doPost(e) {
       case 'saveNoAdeudo': result = saveNoAdeudo_(body); break;
       case 'saveAclaracion': result = saveAclaracion_(body); break;
       case 'listPasses': result = listPasses_(body); break;
+      case 'resendReminder': result = resendReminder_(body); break;
       case 'getPass': result = getPass_(body); break;
       default: throw new Error('Acción no válida.');
     }
@@ -748,6 +749,76 @@ function processDecision_(tokenAut,decision,comentario,actor,actorEmail) {
   // El estatus ENVIADO se utiliza únicamente para Pases de No Adeudo.
   updateByFolio_(sh,folio,{FECHA_ENVIO_FINAL:new Date()});
   return {folio,estatus:'AUTORIZADO'};
+}
+
+/* ========================= RECORDATORIO DE AUTORIZACIÓN ========================= */
+
+function resendReminder_(b) {
+  const s=session_(b.token);
+  requirePassConsulta_(s);
+  const folio=String(b.folio||'').trim();
+  if(!folio) throw new Error('Falta el folio del pase.');
+
+  const sh=sheet_(CFG.SS_ACLARACION,CFG.SH_ACLARACION);
+  ensureHeaders_(sh,['TOKENS_AUTORIZACION','FECHA_ULTIMO_RECORDATORIO']);
+  const lock=LockService.getScriptLock();
+  lock.waitLock(20000);
+  let row, destinatarios=[], tokens={};
+  try {
+    row=objects_(sh).find(x=>val_(x,'FOLIO')===folio);
+    if(!row) throw new Error('Solo se pueden reenviar recordatorios de pases de Aclaración.');
+    if(String(val_(row,'ESTATUS')||'').toUpperCase()!=='PENDIENTE')
+      throw new Error('Este pase ya no está pendiente. Actualiza la consulta para ver su estatus actual.');
+
+    destinatarios=String(val_(row,'CORREO_AUTORIZADOR')||'')
+      .split(/[;,]/).map(x=>x.trim()).filter((x,i,a)=>x && a.findIndex(y=>y.toLowerCase()===x.toLowerCase())===i);
+    if(!destinatarios.length)
+      destinatarios=requireEmailsByProfiles_([val_(row,'DESTINO_AUTORIZACION')],val_(row,'DESTINO_AUTORIZACION'));
+
+    try { tokens=JSON.parse(String(val_(row,'TOKENS_AUTORIZACION')||'{}'))||{}; } catch(_) { tokens={}; }
+    const normalized={};
+    Object.keys(tokens).forEach(k=>{normalized[String(k).trim().toLowerCase()]=tokens[k]});
+    tokens=normalized;
+
+    const validos=[];
+    destinatarios.forEach(correo=>{
+      const info=autorizadorPorCorreo_(correo,val_(row,'DESTINO_AUTORIZACION'));
+      if(!info) return;
+      const key=info.correo.toLowerCase();
+      if(!tokens[key]) tokens[key]=Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');
+      validos.push({info:info,token:tokens[key]});
+    });
+    if(!validos.length) throw new Error('No hay correos de autorizadores válidos configurados para este pase.');
+    updateByFolio_(sh,folio,{TOKENS_AUTORIZACION:JSON.stringify(tokens),FECHA_ULTIMO_RECORDATORIO:new Date()});
+    destinatarios=validos;
+  } finally {
+    lock.releaseLock();
+  }
+
+  const url=ScriptApp.getService().getUrl();
+  let enviados=0;
+  destinatarios.forEach(dest=>{
+    // Verifica otra vez que el pase siga pendiente justo antes de reenviar.
+    const actual=objects_(sh).find(x=>val_(x,'FOLIO')===folio);
+    if(!actual || String(val_(actual,'ESTATUS')||'').toUpperCase()!=='PENDIENTE') return;
+    const info=dest.info;
+    const yes=url+'?action=decision&token='+encodeURIComponent(dest.token)+'&decision=AUTORIZADO';
+    const no=url+'?action=decision&token='+encodeURIComponent(dest.token)+'&decision=RECHAZADO';
+    const html='<div style="font-family:Arial;max-width:650px">'+
+      '<h2>Recordatorio: Pase de Aclaración pendiente</h2><p>Esta es una solicitud de seguimiento; el pase sigue pendiente de autorización.</p>'+ 
+      '<p><b>Folio:</b> '+esc_(folio)+'</p>'+ 
+      '<p><b>Área:</b> '+esc_(val_(actual,'AREA'))+' &nbsp; <b>Autobús:</b> '+esc_(val_(actual,'AUTOBUS'))+'</p>'+ 
+      '<p><b>Conductor:</b> '+esc_(val_(actual,'CLAVE_CONDUCTOR')+' - '+val_(actual,'NOMBRE_CONDUCTOR'))+'</p>'+ 
+      '<p><b>Motivo:</b> '+esc_(val_(actual,'MOTIVO_CONCEPTO'))+'</p>'+ 
+      '<p><b>Autorización dirigida a:</b> '+esc_(info.nombre)+' ('+esc_(info.correo)+')</p>'+ 
+      '<p><a href="'+yes+'" style="background:#18864b;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">AUTORIZAR</a> '+
+      '<a href="'+no+'" style="background:#b42318;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">RECHAZAR</a></p></div>';
+    sendMail_(info.correo,'RECORDATORIO: Autorización Pase de Aclaración '+folio,
+      'Recordatorio: el pase '+folio+' continúa pendiente de autorización para '+info.nombre+' ('+info.correo+').',null,html);
+    enviados++;
+  });
+  if(!enviados) throw new Error('El pase dejó de estar pendiente antes de enviar el recordatorio. Actualiza la consulta.');
+  return {folio:folio,enviados:enviados,mensaje:'Recordatorio enviado a '+enviados+' autorizador(es).'};
 }
 
 /* ========================= CONSULTA ========================= */

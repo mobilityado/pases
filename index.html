@@ -669,7 +669,7 @@ body{overflow-x:hidden!important;background:none!important}
         </div>
         <div id="passAdminSummary" class="passSummary"></div>
       </div><br>
-      <div style="overflow:auto"><table><thead><tr><th>Fecha</th><th>Folio</th><th>Tipo</th><th>Área</th><th>Creado por</th><th>Conductor</th><th>Autobús</th><th>Estatus</th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div style="overflow:auto"><table><thead><tr><th>Fecha</th><th>Folio</th><th>Tipo</th><th>Área</th><th>Creado por</th><th>Conductor</th><th>Autobús</th><th>Estatus</th><th>Acciones</th></tr></thead><tbody id="rows"></tbody></table></div>
     </section>
 
     <section id="conductores" class="hide card">
@@ -901,7 +901,7 @@ let timer;function debounceLoad(){clearTimeout(timer);timer=setTimeout(loadPasse
 async function loadPasses(){
  try{
   const isAdmin=String(profile?.tipo||'').toUpperCase()==='ADMINISTRADOR';
-  rows.innerHTML='<tr><td colspan="8">Cargando...</td></tr>';
+  rows.innerHTML='<tr><td colspan="9">Cargando...</td></tr>';
   const payload={q:fQ.value,tipo:fTipo.value,estatus:fEstado.value};
   if(isAdmin){
     payload.desde=fDesde.value; payload.hasta=fHasta.value; payload.creador=fCreador.value;
@@ -917,8 +917,16 @@ async function loadPasses(){
     <td>${esc(x.claveConductor+' - '+x.nombreConductor)}</td>
     <td>${esc(x.autobus)}</td>
     <td><span class="badge">${esc(x.estatus)}</span></td>
-  </tr>`).join(''):'<tr><td colspan="8">Sin registros para los filtros seleccionados.</td></tr>';
- }catch(e){rows.innerHTML=`<tr><td colspan="8">${esc(e.message)}</td></tr>`}
+    <td>${x.tipo==='ACLARACION'&&String(x.estatus).toUpperCase()==='PENDIENTE'?`<button class="btn ghost" onclick="sendReminder('${esc(x.folio)}',this)">📧 Enviar recordatorio</button>`:'—'}</td>
+  </tr>`).join(''):'<tr><td colspan="9">Sin registros para los filtros seleccionados.</td></tr>';
+ }catch(e){rows.innerHTML=`<tr><td colspan="9">${esc(e.message)}</td></tr>`}
+}
+async function sendReminder(folio,btn){
+ if(!confirm(`¿Reenviar la petición de autorización del pase ${folio} a sus autorizadores?`))return;
+ const old=btn.textContent;btn.disabled=true;btn.textContent='Enviando...';
+ try{const r=await api('resendReminder',{folio});alert(r.mensaje||'Recordatorio enviado correctamente.');await loadPasses()}
+ catch(e){alert(e.message||'No fue posible enviar el recordatorio.')}
+ finally{btn.disabled=false;btn.textContent=old}
 }
 function formatPassDate(v){
  const d=new Date(v); if(isNaN(d)) return v||'';
