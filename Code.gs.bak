@@ -52,7 +52,7 @@ function doPost(e) {
     switch (action) {
       case 'decision':
         result = decisionPost_(body);
-        return HtmlService.createHtmlOutput('<div style="font-family:Arial;text-align:center;padding:50px"><h2>'+esc_(result.folio)+'</h2><h1>'+esc_(result.estatus)+'</h1><p>La decisión quedó registrada correctamente.</p></div>').setTitle('Pases Mobility ADO').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+        return HtmlService.createHtmlOutput('<div style="font-family:Arial;text-align:center;padding:50px"><h2>'+esc_(result.folio)+'</h2><h1>'+esc_(result.estatus)+'</h1><p>La decisión quedó registrada correctamente.</p></div>').setTitle('Pases Mobility ADO');
       case 'login': result = login_(body); break;
       case 'loginUsers': result = loginUsers_(); break;
       case 'logout': result = logout_(body); break;
@@ -569,14 +569,14 @@ function decisionConfirmPage_(p) {
       '<p><b>Autorizador:</b> '+esc_(info.nombre)+'</p>'+
       '<p><b>Correo:</b> '+esc_(info.correo)+'</p>'+
       '<p>Esta pantalla es de confirmación. La decisión no se registra hasta que pulses el botón.</p>'+
-      '<form method="post" action="'+esc_(accion)+'" target="_top" style="margin-top:25px">'+
+      '<form method="post" action="'+esc_(accion)+'" style="margin-top:25px">'+
       '<input type="hidden" name="action" value="decision">'+
       '<input type="hidden" name="token" value="'+esc_(p.token)+'">'+
       '<input type="hidden" name="decision" value="'+esc_(decision)+'">'+
       '<input type="hidden" name="email" value="'+esc_(info.correo)+'">'+
       '<button type="submit" style="background:'+color+';color:#fff;border:0;padding:14px 22px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer">'+esc_(decision==='AUTORIZADO'?'CONFIRMAR AUTORIZACIÓN':'CONFIRMAR RECHAZO')+'</button>'+
       '</form></div>';
-    return HtmlService.createHtmlOutput(html).setTitle('Pases Mobility ADO').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    return HtmlService.createHtmlOutput(html).setTitle('Pases Mobility ADO');
   } catch(err) {
     return HtmlService.createHtmlOutput('<div style="font-family:Arial;padding:50px"><h2>No fue posible abrir la autorización</h2><p>'+esc_(err.message)+'</p></div>');
   }
