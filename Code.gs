@@ -856,7 +856,7 @@ function listPasses_(b) {
   if (status) all=all.filter(x=>String(x.estatus).toUpperCase()===status);
   if (q) all=all.filter(x=>JSON.stringify(x).toUpperCase().includes(q));
   all.sort((a,b)=>new Date(b.fechaCreacion)-new Date(a.fechaCreacion));
-  return all.slice(0,2000);
+  return all;
 }
 
 function getPass_(b) {
