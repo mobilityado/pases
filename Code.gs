@@ -1123,6 +1123,7 @@ function normPass_(r,tipo) {
     folio:val_(r,'FOLIO'), tipo, area:val_(r,'AREA'),
     fechaCreacion:val_(r,'FECHA_CREACION'), autobus:val_(r,'AUTOBUS'),
     claveConductor:val_(r,'CLAVE_CONDUCTOR'), nombreConductor:val_(r,'NOMBRE_CONDUCTOR'),
+    observaciones:val_(r,'OBSERVACIONES'),
     estatus:val_(r,'ESTATUS'), creadoPor:val_(r,'CREADO_POR'),
     nombreCreador:val_(r,'NOMBRE_CREADOR','CREADO_POR')
   };
