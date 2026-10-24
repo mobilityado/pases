@@ -445,26 +445,46 @@ function saveNoAdeudo_(b) {
     ensureDriver_(d.claveConductor,d.nombreConductor,d.marca);
   }
 
-  const folio=nextFolio_('NA',s.area,CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
-  const now=new Date();
-  const recaudacionNA=norm_(d.recaudacion||'');
-  const perfilTrafico=(recaudacionNA==='CARDENAS'||recaudacionNA==='CÁRDENAS')?'TRAFICO CRT':'TRAFICO VHT';
-  
-  const correosDestino=requireEmailsByProfiles_(
-    ['USUARIO','ADMINISTRADOR',perfilTrafico],
-    'USUARIO, ADMINISTRADOR y '+perfilTrafico
-  );
-  const correoDestino=correosDestino.join(',');
-
-  const obj={
-    ID:Utilities.getUuid(), FOLIO:folio, AREA:s.area, FECHA_CREACION:now,
-    RECAUDACION:d.recaudacion, MARCA:d.marca, AUTOBUS:d.autobus,
-    CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor,
-    OBSERVACIONES:d.observaciones||'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre, CORREO_DESTINO:correoDestino,
-    ESTATUS:'GENERADO', FECHA_ENVIO:'', URL_DOCUMENTO:''
-  };
+  // La validación y el registro se protegen con un bloqueo para evitar dos envíos simultáneos.
+  let folio, now, obj, correoDestino;
   const sh=sheet_(CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
-  appendObject_(sh,obj);
+  const lock=LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const claveActual=String(d.claveConductor||'').trim().toUpperCase().replace(/\s+/g,'');
+    const ahora=new Date();
+    const cincoHoras=5*60*60*1000;
+    const pasesPrevios=objects_(sh);
+    const ultimo=pasesPrevios
+      .filter(r=>String(val_(r,'CLAVE_CONDUCTOR')||'').trim().toUpperCase().replace(/\s+/g,'')===claveActual)
+      .map(r=>({fecha:parseDate_(val_(r,'FECHA_CREACION')),folio:val_(r,'FOLIO')}))
+      .filter(x=>x.fecha && !isNaN(x.fecha.getTime()))
+      .sort((a,b)=>b.fecha-a.fecha)[0];
+    if(ultimo && (ahora.getTime()-ultimo.fecha.getTime())<cincoHoras){
+      const minutos=Math.ceil((cincoHoras-(ahora.getTime()-ultimo.fecha.getTime()))/60000);
+      throw new Error('Ese conductor ya tiene un pase emitido para la corrida entregada. Debes esperar a que termine un nuevo viaje para poder generar otro. Intenta nuevamente en aproximadamente '+minutos+' minuto(s).');
+    }
+
+    folio=nextFolio_('NA',s.area,CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
+    now=ahora;
+    const recaudacionNA=norm_(d.recaudacion||'');
+    const perfilTrafico=(recaudacionNA==='CARDENAS'||recaudacionNA==='CÁRDENAS')?'TRAFICO CRT':'TRAFICO VHT';
+    const correosDestino=requireEmailsByProfiles_(
+      ['USUARIO','ADMINISTRADOR',perfilTrafico],
+      'USUARIO, ADMINISTRADOR y '+perfilTrafico
+    );
+    correoDestino=correosDestino.join(',');
+    obj={
+      ID:Utilities.getUuid(), FOLIO:folio, AREA:s.area, FECHA_CREACION:now,
+      RECAUDACION:d.recaudacion, MARCA:d.marca, AUTOBUS:d.autobus,
+      CLAVE_CONDUCTOR:d.claveConductor, NOMBRE_CONDUCTOR:d.nombreConductor,
+      OBSERVACIONES:d.observaciones||'', CREADO_POR:s.usuario, NOMBRE_CREADOR:s.nombre, CORREO_DESTINO:correoDestino,
+      ESTATUS:'GENERADO', FECHA_ENVIO:'', URL_DOCUMENTO:''
+    };
+    appendObject_(sh,obj);
+  } finally {
+    lock.releaseLock();
+  }
 
   const pdf=createPdf_('NO ADEUDO',obj);
   sendMail_(correoDestino,'Pase de No Adeudo '+folio,
