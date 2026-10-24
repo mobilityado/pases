@@ -462,7 +462,7 @@ function saveNoAdeudo_(b) {
       .sort((a,b)=>b.fecha-a.fecha)[0];
     if(ultimo && (ahora.getTime()-ultimo.fecha.getTime())<cincoHoras){
       const minutos=Math.ceil((cincoHoras-(ahora.getTime()-ultimo.fecha.getTime()))/60000);
-      throw new Error('Ese conductor ya tiene un pase emitido para la corrida entregada. Debes esperar a que termine un nuevo viaje para poder generar otro. Intenta nuevamente en aproximadamente '+minutos+' minuto(s).');
+      throw new Error('Ese conductor ya tiene un pase emitido para la corrida entregada. Debes esperar a que termine un nuevo viaje para poder generar otro, puedes ver el pase en la opcion de consulta.');
     }
 
     folio=nextFolio_('NA',s.area,CFG.SS_NO_ADEUDO,CFG.SH_NO_ADEUDO);
