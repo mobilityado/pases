@@ -487,7 +487,7 @@ function saveNoAdeudo_(b) {
   }
 
   const pdf=createPdf_('NO ADEUDO',obj);
-  sendMail_(correoDestino,'Pase de No Adeudo '+folio,
+  sendMail_(correoDestino,'Pase de No Adeudo '+String(d.nombreConductor||'').trim()+' y '+String(d.claveConductor||'').trim(),
     'Se adjunta el Pase de No Adeudo '+folio+'.',pdf);
 
   updateByFolio_(sh,folio,{ESTATUS:'ENVIADO',FECHA_ENVIO:new Date()});
@@ -550,7 +550,7 @@ function saveAclaracion_(b) {
     const correosFinales=requireEmailsByProfiles_(['USUARIO','ADMINISTRADOR'],'USUARIO y ADMINISTRADOR');
     const destinoFinal=correosFinales.join(',');
 
-    sendMail_(destinoFinal,'Pase de Aclaración AUTORIZADO '+folio,
+    sendMail_(destinoFinal,'Nuevo Pase de Aclaración '+String(fresh.NOMBRE_CONDUCTOR||'').trim()+' y '+String(fresh.CLAVE_CONDUCTOR||'').trim(),
       'El pase '+folio+' fue autorizado automáticamente por estar dirigido a ADMINISTRADOR. Se adjunta el documento final.',pdf);
 
     // El pase de Aclaración conserva su estatus de AUTORIZADO.
@@ -580,7 +580,7 @@ function saveAclaracion_(b) {
       '<p><b>Autorización dirigida a:</b> '+esc_(info.nombre)+' ('+esc_(info.correo)+')</p>'+
       '<p><a href="'+yes+'" style="background:#18864b;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">AUTORIZAR</a> '+
       '<a href="'+no+'" style="background:#b42318;color:white;padding:12px 18px;text-decoration:none;border-radius:7px">RECHAZAR</a></p></div>';
-    sendMail_(correo,'Autorización Pase de Aclaración '+folio,
+    sendMail_(correo,'Nuevo Pase de Aclaración '+String(d.nombreConductor||'').trim()+' y '+String(d.claveConductor||'').trim(),
       'Pase '+folio+' pendiente de autorización para '+info.nombre+' ('+info.correo+').',null,html);
   });
   // Guardamos la relación token -> correo en la hoja. Es la fuente de verdad
